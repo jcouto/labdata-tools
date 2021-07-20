@@ -39,7 +39,7 @@ setup(
     long_description = description,
     long_description_content_type='text/markdown',
     license = 'GPL',
-    install_requires = requirements,
+    install_requires = [],
     url = "https://github.com/jpcouto/labdatatools",
     packages = ['labdatatools'],
     #entry_points = {
