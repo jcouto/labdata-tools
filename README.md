@@ -1,32 +1,29 @@
 # labdata-tools
 Utilities to copy data to and from the data server through python using rclone.
 
+### Command line:
 
-## Command line usage:
-
-### List sessions with suite2p and two_photon data:
+#### List sessions with suite2p and two_photon data:
 
 ``labdata sessions JC027 -i suite2p two_photon``
 
-### Get all matlab files for a specific animal:
+#### Get all matlab files for a specific animal:
 
-``labdata get JC027 -i "*.mat"
+``labdata get JC027 -i "*.mat"``
 
 Or for datafiles with a specific name:
 
-``labdata get -a cy11 -i *TheMudSkipper2*.mat``
+``labdata get -a cy11 -i "*TheMudSkipper2*.mat"``
 
-### List subjects in the database:
+#### List subjects in the database:
 
 ``labdata subjects``
 
-
-## Tutorial
+### Tutorial
 
 Look at the ``examples`` folder.
 
-
-## Instalation
+### Instalation
 
 Clone the repository to a folder in your computer and do:
 
