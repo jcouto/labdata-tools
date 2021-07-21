@@ -28,3 +28,6 @@ Look at the ``examples`` folder.
 
 ## Instalation
 
+Clone the repository to a folder in your computer and do:
+
+``python setup.py install`` or ``develop`` to if you plan modifying the code.
