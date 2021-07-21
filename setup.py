@@ -22,12 +22,6 @@ from setuptools.command.install import install
 import os
 from os.path import join as pjoin
 
-labdata_dir = pjoin(os.path.expanduser('~'),'.labdatatools')
-if not os.path.isdir(labdata_dir):
-    print('Creating {0}'.format(labdata_dir))
-    os.makedirs(labdata_dir)
-
-
 description = '''Utilities for copying and managing lab data'''
 
 setup(
@@ -42,10 +36,9 @@ setup(
     install_requires = [],
     url = "https://github.com/jpcouto/labdatatools",
     packages = ['labdatatools'],
-    #entry_points = {
-    #    'console_scripts': [
-    #        'wfield = wfield.cli:main',
-    #        'wfield-ncaas = wfield.ncaas_gui:main',
-    #    ]
-    #},
+    entry_points = {
+        'console_scripts': [
+            'labdata = labdatatools.cli:main',
+        ]
+    },
 )

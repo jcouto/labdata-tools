@@ -29,15 +29,20 @@ def rclone_list_sessions(subject):
     else:
         return None
 
-def rclone_list_files(subject = '',filters = []):
+def rclone_list_files(subject = '', filters = []):
 
     cmd = 'rclone ls {drive}:{folder}/{subject}'.format(
         subject=subject,
         **preferences['rclone'])
-    if len(filters):
-        for i in filters:
-            cmd += ' --include {0}'.format(i)
+    #if len(includes):
+    #    for i in includes:
+    #        cmd += ' --include {0}'.format(i)
+    #if len(excludes):
+    #    for i in excludes:
+    #        cmd += ' --exclude {0}'.format(i)
+
     out = check_output(cmd.split(' ')).decode("utf-8")
+    print(cmd)
     files = []
     for a in out.split('\n'):
         a = a.strip(' ')
@@ -54,11 +59,19 @@ def rclone_list_files(subject = '',filters = []):
                     s = 1
                 session = tmp[0+s]
                 datatype = tmp[1+s]
-            files.append(dict(filename=os.path.basename(fname),
-                              filesize = int(sz),filepath = fname,
-                              dirname = dirname,
-                              session = session,
-                              datatype = datatype))
+            include = False
+            
+            for inn in filters:
+                if inn in fname:
+                    include = True
+            if not len(filters):
+                include = True
+            if include:
+                files.append(dict(filename=os.path.basename(fname),
+                                  filesize = int(sz),filepath = fname,
+                                  dirname = dirname,
+                                  session = session,
+                                  datatype = datatype))
     return pd.DataFrame(files)
 
 def rclone_upload_data(subject=''):
@@ -143,5 +156,4 @@ Note:
             if nextline == '' and process.poll() is not None:
                 break
     output = process.communicate()[0]
-    exitCode = process.returncode
-    return nextline
+    return process.returncode
