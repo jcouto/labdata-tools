@@ -94,7 +94,11 @@ def rclone_upload_data(subject=''):
     output = process.communicate()[0]
     exitCode = process.returncode
 
-def rclone_get_data(subject='', session = '', datatype = '', includes = [], excludes = []):
+def rclone_get_data(subject='',
+                    session = '',
+                    datatype = '',
+                    includes = [],
+                    excludes = []):
     '''
     Fetch data from the data server.
     
