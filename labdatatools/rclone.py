@@ -7,9 +7,10 @@ from tqdm import tqdm
 def rclone_list_subjects():
     '''
     Lists the subjects on the google drive
-    Returns a pandas dataframe with the kist of subjects
+    Returns a pandas dataframe with the kist of subjects if the subjects are 
+the first level of the folder hierarchy.
     '''
-    out = check_output('rclone lsd {drive}:{folder}'.format(**preferences['rclone']).split(' ')).decode("utf-8")
+    out = check_output('rclone lsd {drive}:{folder}'.format(**labdata_preferences['rclone']).split(' ')).decode("utf-8")
     out = out.splitlines()
     subjects = [o.split(' ')[-1] for o in out]
     if len(subjects):
@@ -20,7 +21,7 @@ def rclone_list_subjects():
 def rclone_list_sessions(subject):
     out = check_output(
         'rclone lsd {drive}:{folder}/{subject}'.format(
-            **preferences['rclone'],
+            **labdata_preferences['rclone'],
             subject = subject).split(' ')).decode("utf-8")
     out = out.splitlines()
     sessions = [o.split(' ')[-1] for o in out]
@@ -30,10 +31,13 @@ def rclone_list_sessions(subject):
         return None
 
 def rclone_list_files(subject = '', filters = []):
-
+    '''
+    Gets a list of all files in the remote.
+    Specify a subject to get only the first level.
+    '''
     cmd = 'rclone ls {drive}:{folder}/{subject}'.format(
         subject=subject,
-        **preferences['rclone'])
+        **labdata_preferences['rclone'])
     #if len(includes):
     #    for i in includes:
     #        cmd += ' --include {0}'.format(i)
@@ -74,14 +78,14 @@ def rclone_list_files(subject = '', filters = []):
                                   datatype = datatype))
     return pd.DataFrame(files)
 
-def rclone_upload_data(subject=''):
+def rclone_upload_data(subject='',no_overwrite = True):
     # this needs a pipe
     if not len(subject):
         subject = '/' + subject
     command = 'rclone copy --progress {path} {drive}:{folder}{subject}'.format(
         subject=subject,
-        path = preferences['paths']['serverpaths'][0],
-        **preferences['rclone'])
+        path = labdata_preferences['paths']['serverpaths'][0],
+        **labdata_preferences['rclone'])
     process = Popen(command, shell=True, 
                     stdout=PIPE, stderr=STDOUT,
                     universal_newlines = False)
@@ -94,11 +98,11 @@ def rclone_upload_data(subject=''):
     output = process.communicate()[0]
     exitCode = process.returncode
 
-def rclone_get_data(subject='',
-                    session = '',
-                    datatype = '',
+def rclone_get_data(path_format = None,
                     includes = [],
-                    excludes = []):
+                    excludes = [],
+                    ipath = 0,
+                    **kwargs):
     '''
     Fetch data from the data server.
     
@@ -106,37 +110,35 @@ Note:
 
     TODO: Add examples for how to filter. 
     '''
-    if len(subject):
-        subject = '/' + subject
-        if len(session):
-            session = '/' + session
+    if path_format is None:
+        path_format = labdata_preferences['path_format']
+
+    fmts = path_format.split('/')
+    keys = dict(labdata_preferences['rclone'],
+                path = labdata_preferences['paths'][ipath],
+                **kwargs)
+    for fmt in fmts:
+        fmt = fmt.strip('{').strip('}')
+        if not fmt in keys.keys():
+            keys[fmt] = '*'
+    for fmt in fmts[::-1]:
+        fmt = fmt.strip('{').strip('}')
+        if keys[fmt] == '*':
+            fmts.pop()
         else:
-            if len(datatype):
-                print('DATATYPE does not work without SESSION. Use filters.')
-                datatype = ''
-        if len(datatype):
-            datatype = '/' + datatype
-    else:
-        if len(session):
-            print('SESSION does not work without SUBJECT. Use filters.')
-            session = ''
-        if len(datatype):
-            print('DATATYPE does not work without SUBJECT. Use filters.')
-            datatype = ''
-            
-    cmd = 'rclone copy --progress {drive}:{folder}{subject}{session}{datatype} {path}{subject}{session}{datatype}'.format(
-        subject=subject,
-        path = preferences['paths'][0],
-        session = session,
-        datatype = datatype,
-        **preferences['rclone'])
+            break
+    
+    local_path = pjoin('{path}',*fmts)  # build local path, so it is OS independent
+    keys['drive_path'] = '/'.join(fmts).format(**keys)
+    keys['local_path'] = local_path.format(**keys)
+    cmd = 'rclone copy --progress {drive}:{folder}/{drive_path} {local_path}'.format(
+        **keys)
     if len(includes):
         for i in includes:
             cmd += ' --include {0}'.format(i)
     if len(excludes):
         for i in excludes:
             cmd += ' --exclude {0}'.format(i)
-
     process = Popen(cmd, shell=True, 
                     stdout=PIPE, stderr=STDOUT,
                     universal_newlines = False)
@@ -161,3 +163,4 @@ Note:
                 break
     output = process.communicate()[0]
     return process.returncode
+

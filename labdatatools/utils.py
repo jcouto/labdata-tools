@@ -11,9 +11,46 @@ from glob import glob
 
 LABDATA_FILE= pjoin(os.path.expanduser('~'),'.labdatatools')
 
-default_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
-                       'rclone' : dict(drive = 'churchland_data',
-                                       folder = 'data')}
+default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
+                               'path_format':'{subject}/{session}/{datatype}',
+                               'rclone' : dict(drive = 'churchland_data',
+                                               folder = 'data')}
+
+def list_subjects():
+    subjects = []
+    for path in labdata_preferences['paths']['serverpaths']:
+        tmp = glob(pjoin(path,'*'))
+        for t in tmp:
+            if not os.path.isdir(t):
+                continue
+            if not os.path.basename(t) in [s['subject'] for s in subjects]:
+                subjects.append(dict(subject=os.path.basename(t),paths = []))
+            subjects[[s['subject'] for s in subjects].index(os.path.basename(t))]['paths'].append(t)
+                
+    return pd.DataFrame(subjects)
+
+def list_files(subject = '', extension=''):
+    paths = []
+    for server in labdata_preferences['paths']['serverpaths']:
+        paths.append(pjoin(server,'{subject}'.format(subject = subject)))
+    files = []
+    # recursive search
+    for path in paths:
+        tmp = [y for x in os.walk(path) 
+                      for y in glob(pjoin(x[0], '*' + extension))]
+        tmp = list(filter(os.path.isfile,tmp))
+        for f in natsorted(np.array(tmp)):
+            folder = f.replace(pjoin(path,''),'').split(os.path.sep)[0]
+        
+        for t in tmp:
+            stats = os.stat(t)
+            files.append(dict(filename = os.path.basename(t),
+                              filepath = t,
+                              relativepath = t.replace(path,''),
+                              filesize = stats.st_size,
+                              mtime = stats.st_mtime))
+    return pd.DataFrame(files)
+
 
 def get_filepath(datapath,
                  subject,
@@ -47,10 +84,10 @@ def get_filepath(datapath,
                              extension)
     return files
 
-def get_preferences(prefpath = None):
+def get_labdata_preferences(prefpath = None):
     ''' Reads the user parameters from the home directory.
 
-    pref = get_preferences(filename)
+    pref = get_labdata_preferences(filename)
 
     User parameters like folder location, file preferences, paths...
 
@@ -60,14 +97,17 @@ def get_preferences(prefpath = None):
     preffolder = os.path.dirname(prefpath)
     if not os.path.isfile(prefpath):
         with open(prefpath, 'w') as outfile:
-            json.dump(default_preferences, 
+            json.dump(default_labdata_preferences, 
                       outfile, 
                       sort_keys = True, 
                       indent = 4)
             print('Saving default preferences to: ' + prefpath)
     with open(prefpath, 'r') as infile:
         pref = json.load(infile)
+    for k in default_labdata_preferences:
+        if not k in pref.keys():
+            pref[k] = default_labdata_preferences[k] 
     return pref
 
-preferences = get_preferences()
+labdata_preferences = get_labdata_preferences()
 
