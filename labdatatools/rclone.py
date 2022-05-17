@@ -164,3 +164,33 @@ Note:
     output = process.communicate()[0]
     return process.returncode
 
+def rclone_upload_data(subject='',
+                       path_idx = 0,
+                       bwlimit = None,
+                       overwrite = False):
+    # this needs a pipe
+    if not len(subject):
+        subject = '/' + subject
+    command = 'rclone copy --progress {path} {drive}:{folder}{subject}'.format(
+        subject=subject,
+        path = labdata_preferences['paths'][0],
+        **labdata_preferences['rclone'])
+    if not bwlimit is None:
+        command += ' --bwlimit {0}M'.format(bwlimit)
+    if not overwrite:
+        command += ' --ignore-existing'
+    process = Popen(command, shell=True, 
+                    stdout=PIPE, stderr=STDOUT,
+                    universal_newlines = False)
+    while True:
+        nextline = process.stdout.readline()
+        nextline = nextline.decode()
+        if nextline == '' and process.poll() is not None:
+            break
+        #if 'ETA' in nextline:
+        print('\r'+nextline,
+              end='',
+              flush=True) # decode does not play nice with "\r"
+
+    output = process.communicate()[0]
+    exitCode = process.returncode

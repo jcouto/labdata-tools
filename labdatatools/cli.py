@@ -12,6 +12,7 @@ The commands are:
     subjects                            list subjects in the remote
     sessions <subject_name>             list sessions for a subject
     get                                 get a dataset
+    upload  <subject_name (optional)>   uploads a dataset
 ''')
         parser.add_argument('command', help= 'type: labdata <command> -h for help')
 
@@ -22,7 +23,24 @@ The commands are:
             exit(1)
         getattr(self,args.command)()
 
-
+    def upload(self):
+        parser = argparse.ArgumentParser(
+            description = 'Upload datafolder in "path" to the remote.',
+            usage = 'labdata upload <subject_name (optional)>')
+        
+        parser.add_argument('subject', action='store', default='',
+                            type=str, nargs = '?')
+        parser.add_argument('-l','--bwlimit', action='store', default=None, type=int)
+        parser.add_argument('--path-index', action='store',
+                            default=0, type=int)
+        parser.add_argument('--overwrite', action='store_true',
+                            default=False)
+        args = parser.parse_args(sys.argv[2:])
+        rclone_upload_data(subject = args.subject,
+                           path_idx = args.path_index,
+                           bwlimit = args.bwlimit,
+                           overwrite = args.overwrite)
+        
     def subjects(self):
         parser = argparse.ArgumentParser(description = 'list subjects in the database',
                                          usage = 'labdata subjects')
@@ -62,19 +80,22 @@ The commands are:
             description = 'fetch data from the database',
             usage = 'labdata get <subject_name>')
         
-        parser.add_argument('-a','--subject', action='store', default='', type=str)
-        parser.add_argument('-s','--session', action='store', default='', type=str)
-        parser.add_argument('-d','--datatype', action='store', default='', type=str)
+        parser.add_argument('-a','--subject', action='store', default=[], type=str,nargs='+')
+        parser.add_argument('-s','--session', action='store', default=[], type=str,nargs='+')
+        parser.add_argument('-d','--datatype', action='store', default=[], type=str,nargs='+')
         parser.add_argument('-i','--includes', action='store', default=[], type=str, nargs='+')
         parser.add_argument('-e','--excludes', action='store', default=[], type=str, nargs='+')
         
         args = parser.parse_args(sys.argv[2:])
         inc = args.includes
-        rclone_get_data(subject = args.subject,
-                        session = args.session,
-                        datatype = args.datatype,
-                        includes = args.includes,
-                        excludes = args.excludes)
+        for subject in args.subject:
+            for session in args.session:
+                for datatype in args.datatype:
+                    rclone_get_data(subject = subject,
+                                    session = session,
+                                    datatype = datatype,
+                                    includes = args.includes,
+                                    excludes = args.excludes)
         
 def main():
     CLI_parser()
