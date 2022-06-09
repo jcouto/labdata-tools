@@ -72,36 +72,18 @@ def rclone_list_files(subject = '', filters = []):
                 include = True
             if include:
                 files.append(dict(filename=os.path.basename(fname),
-                                  filesize = int(sz),filepath = fname,
+                                  filesize = int(sz),
+                                  filepath = fname,
                                   dirname = dirname,
                                   session = session,
                                   datatype = datatype))
     return pd.DataFrame(files)
 
-def rclone_upload_data(subject='',no_overwrite = True):
-    # this needs a pipe
-    if not len(subject):
-        subject = '/' + subject
-    command = 'rclone copy --progress {path} {drive}:{folder}{subject}'.format(
-        subject=subject,
-        path = labdata_preferences['paths']['serverpaths'][0],
-        **labdata_preferences['rclone'])
-    process = Popen(command, shell=True, 
-                    stdout=PIPE, stderr=STDOUT,
-                    universal_newlines = False)
-    while True:
-        nextline = process.stdout.readline()
-        nextline = nextline.decode()
-        if nextline == '' and process.poll() is not None:
-            break
-        print(nextline, end='',flush=True) # decode does not play nice with "\r"
-    output = process.communicate()[0]
-    exitCode = process.returncode
-
 def rclone_get_data(path_format = None,
                     includes = [],
                     excludes = [],
                     ipath = 0,
+                    verbose = True,
                     **kwargs):
     '''
     Fetch data from the data server.
@@ -131,14 +113,15 @@ Note:
     local_path = pjoin('{path}',*fmts)  # build local path, so it is OS independent
     keys['drive_path'] = '/'.join(fmts).format(**keys)
     keys['local_path'] = local_path.format(**keys)
-    cmd = 'rclone copy --progress {drive}:{folder}/{drive_path} {local_path}'.format(
-        **keys)
+    cmd = 'rclone copy --progress {drive}:{folder}/{drive_path} {local_path}'.format(**keys)
     if len(includes):
         for i in includes:
             cmd += ' --include {0}'.format(i)
     if len(excludes):
         for i in excludes:
             cmd += ' --exclude {0}'.format(i)
+    if verbose:
+        print(cmd)
     process = Popen(cmd, shell=True, 
                     stdout=PIPE, stderr=STDOUT,
                     universal_newlines = False)
@@ -167,6 +150,7 @@ Note:
 def rclone_upload_data(subject='',
                        path_idx = 0,
                        bwlimit = None,
+                       excludes = ['.phy'],
                        overwrite = False):
     # this needs a pipe
     if not len(subject):
@@ -179,6 +163,10 @@ def rclone_upload_data(subject='',
         command += ' --bwlimit {0}M'.format(bwlimit)
     if not overwrite:
         command += ' --ignore-existing'
+    if len(excludes):
+        for i in excludes:
+            command += ' --exclude {0}'.format(i)
+
     process = Popen(command, shell=True, 
                     stdout=PIPE, stderr=STDOUT,
                     universal_newlines = False)

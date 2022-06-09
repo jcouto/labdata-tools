@@ -33,13 +33,16 @@ The commands are:
         parser.add_argument('-l','--bwlimit', action='store', default=None, type=int)
         parser.add_argument('--path-index', action='store',
                             default=0, type=int)
+        parser.add_argument('-e','--excludes', action='store', default=['.phy'], type=str, nargs='+')
         parser.add_argument('--overwrite', action='store_true',
                             default=False)
+        parser.add_argument
         args = parser.parse_args(sys.argv[2:])
         rclone_upload_data(subject = args.subject,
                            path_idx = args.path_index,
                            bwlimit = args.bwlimit,
-                           overwrite = args.overwrite)
+                           overwrite = args.overwrite,
+                           excludes = args.excludes)
         
     def subjects(self):
         parser = argparse.ArgumentParser(description = 'list subjects in the database',
@@ -70,7 +73,7 @@ The commands are:
         if not len(files):
             print('Found no sessions.')
             return
-        for ses in files.session.unique():
+        for ses in np.sort(files.session.unique()):
             print(ses,flush=True)
             t = files[files.session == ses]
             print('\t'+'\n\t'.join(t.datatype.unique()), flush=True)
@@ -81,8 +84,8 @@ The commands are:
             usage = 'labdata get <subject_name>')
         
         parser.add_argument('-a','--subject', action='store', default=[], type=str,nargs='+')
-        parser.add_argument('-s','--session', action='store', default=[], type=str,nargs='+')
-        parser.add_argument('-d','--datatype', action='store', default=[], type=str,nargs='+')
+        parser.add_argument('-s','--session', action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-d','--datatype', action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-i','--includes', action='store', default=[], type=str, nargs='+')
         parser.add_argument('-e','--excludes', action='store', default=[], type=str, nargs='+')
         
@@ -96,6 +99,17 @@ The commands are:
                                     datatype = datatype,
                                     includes = args.includes,
                                     excludes = args.excludes)
+    def clean_local(self):
+        parser = argparse.ArgumentParser(
+            description = 'fetch data from the database',
+            usage = 'labdata clean_local')
+
+        # todo: add stuff to select only some animals
+        parser.add_argument('-e','--except', action='store', default=[], type=str,nargs='+')
+        
+        args = parser.parse_args(sys.argv[2:])        
+
+        
         
 def main():
     CLI_parser()

@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import os
 from glob import glob
+from natsort import natsorted
 
 LABDATA_FILE= pjoin(os.path.expanduser('~'),'.labdatatools')
 
@@ -31,8 +32,16 @@ def list_subjects():
 
 def list_files(subject = '', extension=''):
     paths = []
-    for server in labdata_preferences['paths']['serverpaths']:
-        paths.append(pjoin(server,'{subject}'.format(subject = subject)))
+    for server in labdata_preferences['paths']:
+        if len(subject):
+            if type(subject) is list:
+                for s in subject:
+                    paths.append(pjoin(server,'{subject}'.format(subject = s)))
+            else:
+                paths.append(pjoin(server,'{subject}'.format(subject = subject)))
+        else:
+            paths.append(server)
+
     files = []
     # recursive search
     for path in paths:
@@ -48,6 +57,8 @@ def list_files(subject = '', extension=''):
                               filepath = t,
                               relativepath = t.replace(path,''),
                               filesize = stats.st_size,
+                              serverpath = '/'.join(
+                                  os.path.normpath(t.replace(path,'')).split(os.path.sep)),
                               mtime = stats.st_mtime))
     return pd.DataFrame(files)
 
