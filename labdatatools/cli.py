@@ -13,6 +13,7 @@ The commands are:
     sessions <subject_name>             list sessions for a subject
     get                                 get a dataset
     upload  <subject_name (optional)>   uploads a dataset
+    slurm <script>
 ''')
         parser.add_argument('command', help= 'type: labdata <command> -h for help')
 
@@ -23,6 +24,41 @@ The commands are:
             exit(1)
         getattr(self,args.command)()
 
+    def slurm(self):
+        parser = argparse.ArgumentParser(
+            description = 'Process a dataset locally using slurm.',
+            usage = 'labdata slurm <ANALYSIS> -- <PARAMETERS>')
+        
+        parser.add_argument('analysis', action='store', default = '',
+                            type=str,nargs = '?')
+        parser.add_argument('-a','--subject', action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-s','--session', action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-d','--datatype', action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-i','--includes', action='store', default=[], type=str, nargs='+')
+        parser.add_argument('-e','--excludes', action='store', default=[], type=str, nargs='+')
+
+        parser.add_argument('-q','--queue', action='store', default=None, type=str)
+        parser.add_argument('-m','--memory', action='store', default=None, type=int)
+        parser.add_argument('-n','--ncpus', action='store',default = None, type=int)
+        parser.add_argument('--list-queues',action='store_true',default = False)
+        parser.add_argument('--list-jobs',action='store_true',default = False)
+
+        
+        sysargs = sys.argv[2:]
+        analysisargs = []
+        if '--' in sys.argv:
+            sysargs = sys.argv[2:sys.argv.index('--')]
+            analysisargs = sys.argv[sys.argv.index('--'):]
+        args = parser.parse_args(sysargs)
+        if args.list_queues:
+            os.system('sinfo')
+        if args.list_jobs:
+            os.system('squeue')
+        if args.analysis in ['avail','available','list']:
+            print('Listing analysis available in {0}'.format(
+                labdata_preferences['plugins_folder']))
+        print(args)
+
     def upload(self):
         parser = argparse.ArgumentParser(
             description = 'Upload datafolder in "path" to the remote.',
@@ -30,6 +66,9 @@ The commands are:
         
         parser.add_argument('subject', action='store', default='',
                             type=str, nargs = '?')
+        parser.add_argument('-s','--session', action='store', default=None, type=str)
+        parser.add_argument('-d','--datatype', action='store', default=None, type=str)
+
         parser.add_argument('-l','--bwlimit', action='store', default=None, type=int)
         parser.add_argument('--path-index', action='store',
                             default=0, type=int)
@@ -39,6 +78,8 @@ The commands are:
         parser.add_argument
         args = parser.parse_args(sys.argv[2:])
         rclone_upload_data(subject = args.subject,
+                           session = args.session,
+                           datatype = args.datatype,
                            path_idx = args.path_index,
                            bwlimit = args.bwlimit,
                            overwrite = args.overwrite,
@@ -81,16 +122,15 @@ The commands are:
     def get(self):
         parser = argparse.ArgumentParser(
             description = 'fetch data from the database',
-            usage = 'labdata get <subject_name>')
+            usage = 'labdata get -a <subject_name>')
         
-        parser.add_argument('-a','--subject', action='store', default=[], type=str,nargs='+')
+        parser.add_argument('-a','--subject', action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-s','--session', action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-d','--datatype', action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-i','--includes', action='store', default=[], type=str, nargs='+')
         parser.add_argument('-e','--excludes', action='store', default=[], type=str, nargs='+')
         
         args = parser.parse_args(sys.argv[2:])
-        inc = args.includes
         for subject in args.subject:
             for session in args.session:
                 for datatype in args.datatype:

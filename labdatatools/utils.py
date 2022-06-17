@@ -15,7 +15,9 @@ LABDATA_FILE= pjoin(os.path.expanduser('~'),'.labdatatools')
 default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                'path_format':'{subject}/{session}/{datatype}',
                                'rclone' : dict(drive = 'churchland_data',
-                                               folder = 'data')}
+                                               folder = 'data'),
+                               'plugins_folder':pjoin(os.path.expanduser('~'),
+                                                      'labdata','analysis')}
 
 def list_subjects():
     subjects = []
@@ -69,7 +71,8 @@ def get_filepath(datapath,
                  subfolders,
                  filename = '*',
                  extension = '',
-                 fetch = False):
+                 fetch = False,
+                 **kwargs):
     '''Get a local filepath by extension'''
     files = glob(pjoin(datapath,
                        subject,

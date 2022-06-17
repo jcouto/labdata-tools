@@ -57,12 +57,13 @@ def rclone_list_files(subject = '', filters = []):
             tmp = dirname.split('/')
             session = None
             datatype = None
-            if len(tmp)>=2:
+            if len(tmp)>=1:
                 s = 0
                 if subject == '':
                     s = 1
                 session = tmp[0+s]
-                datatype = tmp[1+s]
+                if len(tmp)>=2:
+                    datatype = tmp[1+s]
             include = False
             
             for inn in filters:
@@ -70,6 +71,8 @@ def rclone_list_files(subject = '', filters = []):
                     include = True
             if not len(filters):
                 include = True
+            if datatype is None: # for files on the session level
+                 datatype = '.'
             if include:
                 files.append(dict(filename=os.path.basename(fname),
                                   filesize = int(sz),
@@ -148,16 +151,29 @@ Note:
     return process.returncode
 
 def rclone_upload_data(subject='',
+                       session = None,
+                       datatype = None,
                        path_idx = 0,
                        bwlimit = None,
                        excludes = ['.phy'],
                        overwrite = False):
     # this needs a pipe
-    if not len(subject):
+    localpath = labdata_preferences['paths'][path_idx]
+    if len(subject):
+        localpath = pjoin(localpath,subject)
         subject = '/' + subject
-    command = 'rclone copy --progress {path} {drive}:{folder}{subject}'.format(
-        subject=subject,
-        path = labdata_preferences['paths'][0],
+    remotepath = subject
+    
+    if not session is None:
+        localpath = pjoin(localpath,session)
+        remotepath += '/'+session
+        if not datatype is None:  # needs a session
+            localpath = pjoin(localpath,datatype)
+            remotepath += '/'+datatype
+        
+    command = 'rclone copy --progress {path} {drive}:{folder}{remote}'.format(
+        remote=remotepath,
+        path = localpath,
         **labdata_preferences['rclone'])
     if not bwlimit is None:
         command += ' --bwlimit {0}M'.format(bwlimit)
@@ -166,7 +182,7 @@ def rclone_upload_data(subject='',
     if len(excludes):
         for i in excludes:
             command += ' --exclude {0}'.format(i)
-
+    print(command)
     process = Popen(command, shell=True, 
                     stdout=PIPE, stderr=STDOUT,
                     universal_newlines = False)
