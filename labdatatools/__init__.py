@@ -2,3 +2,4 @@
 # -*- coding: utf-8 -*-
 from .rclone import *
 from .utils import *
+from .analysis import BaseAnalysisPlugin

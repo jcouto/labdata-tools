@@ -1,5 +1,22 @@
 from .utils import *
-from .rclone import rclone_get_dataset
+from .rclone import rclone_get_data
+
+def load_plugins():
+    an = dict(files = glob(pjoin(
+        labdata_preferences['plugins_folder'],'analysis_*.py')))
+    an['names'] = [os.path.basename(
+        f).split('_')[-1].replace('.py','') for f in an['files']]
+    analysis = []
+    for f,n in zip(an['files'],an['names']):
+        analysis.append(dict(file=f,name=n,object = None))
+    import sys
+    sys.path.append(labdata_preferences['plugins_folder'])
+    for f in analysis:
+        eval('exec("from {0} import Analysis{1}")'.format(
+            os.path.basename(f['file']).replace('.py',''),
+            f['name'].capitalize()))
+        f['object'] = eval('Analysis{0}'.format(f['name'].capitalize()))
+    return f
 
 def BaseAnalysisPlugin():
     def __init__(self, subject,
@@ -9,6 +26,7 @@ def BaseAnalysisPlugin():
                  excludes = [''],
                  bwlimit = None,
                  overwrite = False,
+                 arguments = [],
                  **kwargs):
 
         self.description = 'Not Implemented'
@@ -31,19 +49,30 @@ def BaseAnalysisPlugin():
         if len(folders):
             self.session_folder = folders[0]
             return folders[0]
-        raise(OSError('[{0}] Could not find session {1} subject {2}'.format(self.name,
-                                                                            self.session,
-                                                                            self.subject)))
+        raise(OSError('[{0}] Could not find session {1} subject {2}'.format(
+            self.name,
+            self.session,
+            self.subject)))
     
     def process(self,fetch = True, push = True):
         '''Run an analysis locally '''
+        self.validate_parameters()
         self.fetch_data()
         self._run()
         self.put_data()
         
     def _run(self):
-        raise(NotImplemented('Use this method to write code to run the analysis.'))
-        
+        raise(NotImplemented(
+            'Use this method to write code to run the analysis.'))
+
+    def parse_arguments(self,arguments):
+        'Options go here'
+        pass
+
+    def validate_parameters(self):
+        'This method is ran first '
+        pass
+    
     def fetch_data(self):
         if not self.subject is None:
             if not self.session is None:

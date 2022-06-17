@@ -17,7 +17,7 @@ default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                'rclone' : dict(drive = 'churchland_data',
                                                folder = 'data'),
                                'plugins_folder':pjoin(os.path.expanduser('~'),
-                                                      'labdata','analysis')}
+                                                      'labdatatools','analysis')}
 
 def list_subjects():
     subjects = []

@@ -8,12 +8,17 @@ class CLI_parser(object):
             description = 'labdata - tools to handle data from shared remotes',
             usage = ''' labdata <command> [<args>]
 
-The commands are: 
+The commands are:
+            
     subjects                            list subjects in the remote
-    sessions <subject_name>             list sessions for a subject
-    get                                 get a dataset
-    upload  <subject_name (optional)>   uploads a dataset
-    slurm <script>
+    sessions  <SUBJECT>                 list sessions for a subject
+    get -a <SUBJECT> -s <SESSION>       get a dataset
+
+    upload <SUBJECT (optional)>         uploads a dataset
+
+    run <ANALYSIS>                      Runs an analysis script
+    slurm <ANALYSIS>                    Submits an analysis script the queue
+            
 ''')
         parser.add_argument('command', help= 'type: labdata <command> -h for help')
 
@@ -31,14 +36,20 @@ The commands are:
         
         parser.add_argument('analysis', action='store', default = '',
                             type=str,nargs = '?')
-        parser.add_argument('-a','--subject', action='store', default=[''], type=str,nargs='+')
-        parser.add_argument('-s','--session', action='store', default=[''], type=str,nargs='+')
-        parser.add_argument('-d','--datatype', action='store', default=[''], type=str,nargs='+')
-        parser.add_argument('-i','--includes', action='store', default=[], type=str, nargs='+')
-        parser.add_argument('-e','--excludes', action='store', default=[], type=str, nargs='+')
-
-        parser.add_argument('-q','--queue', action='store', default=None, type=str)
-        parser.add_argument('-m','--memory', action='store', default=None, type=int)
+        parser.add_argument('-a','--subject',
+                            action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-s','--session',
+                            action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-d','--datatype',
+                            action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-i','--includes',
+                            action='store', default=[], type=str, nargs='+')
+        parser.add_argument('-e','--excludes',
+                            action='store', default=[], type=str, nargs='+')
+        parser.add_argument('-q','--queue',
+                            action='store', default=None, type=str)
+        parser.add_argument('-m','--memory',
+                            action='store', default=None, type=int)
         parser.add_argument('-n','--ncpus', action='store',default = None, type=int)
         parser.add_argument('--list-queues',action='store_true',default = False)
         parser.add_argument('--list-jobs',action='store_true',default = False)
@@ -59,6 +70,31 @@ The commands are:
                 labdata_preferences['plugins_folder']))
         print(args)
 
+    def run(self):
+        parser = argparse.ArgumentParser(
+            description = 'Run an analysis on a dataset.',
+            usage = 'labdata run <ANALYSIS> -- <PARAMETERS>')
+        parser.add_argument('analysis', action='store', default = '',
+                            type=str,nargs = '?')
+        parser.add_argument('-a','--subject',
+                            action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-s','--session',
+                            action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-d','--datatype',
+                            action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('-i','--includes',
+                            action='store', default=[], type=str, nargs='+')
+        parser.add_argument('-e','--excludes',
+                            action='store', default=[], type=str, nargs='+')
+        sysargs = sys.argv[2:]
+        analysisargs = []
+        if '--' in sys.argv:
+            sysargs = sys.argv[2:sys.argv.index('--')]
+            analysisargs = sys.argv[sys.argv.index('--'):]
+        args = parser.parse_args(sysargs)
+        print(args)
+        
+        
     def upload(self):
         parser = argparse.ArgumentParser(
             description = 'Upload datafolder in "path" to the remote.',
