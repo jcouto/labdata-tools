@@ -1,5 +1,6 @@
 import argparse
 from .rclone import *
+from .analysis import load_plugins
 import sys
 
 class CLI_parser(object):
@@ -40,7 +41,7 @@ The commands are:
                             action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-s','--session',
                             action='store', default=[''], type=str,nargs='+')
-        parser.add_argument('-d','--datatype',
+        parser.add_argument('-d','--datatypes',
                             action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-i','--includes',
                             action='store', default=[], type=str, nargs='+')
@@ -65,11 +66,24 @@ The commands are:
             os.system('sinfo')
         if args.list_jobs:
             os.system('squeue')
-        if args.analysis in ['avail','available','list']:
-            print('Listing analysis available in {0}'.format(
+        plugins = load_plugins()
+        if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
+            print('Available analysis [{0}]'.format(
                 labdata_preferences['plugins_folder']))
-        print(args)
+            for p in plugins:
+                print('\t'+p['name'])
+            return
+        analysis = plugins[
+            [p['name'] for p in plugins].index(args.analysis)]['object'](
+                subject = args.subject,
+                session = args.session,
+                datatypes = args.datatypes,
+                includes = args.includes,
+                excludes = args.excludes)
+        analysis.parse_arguments(analysisargs)
+        analysis.validate_parameters()
 
+        
     def run(self):
         parser = argparse.ArgumentParser(
             description = 'Run an analysis on a dataset.',
@@ -80,7 +94,7 @@ The commands are:
                             action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-s','--session',
                             action='store', default=[''], type=str,nargs='+')
-        parser.add_argument('-d','--datatype',
+        parser.add_argument('-d','--datatypes',
                             action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-i','--includes',
                             action='store', default=[], type=str, nargs='+')
@@ -92,8 +106,23 @@ The commands are:
             sysargs = sys.argv[2:sys.argv.index('--')]
             analysisargs = sys.argv[sys.argv.index('--'):]
         args = parser.parse_args(sysargs)
-        print(args)
-        
+        plugins = load_plugins()
+        if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
+            print('Available analysis [{0}]'.format(
+                labdata_preferences['plugins_folder']))
+            for p in plugins:
+                print('\t'+p['name'])
+
+        analysis = plugins[
+            [p['name'] for p in plugins].index(args.analysis)]['object'](
+                subject = args.subject,
+                session = args.session,
+                datatypes = args.datatypes,
+                includes = args.includes,
+                excludes = args.excludes)
+        analysis.parse_arguments(analysisargs)
+
+        analysis.validate_parameters()
         
     def upload(self):
         parser = argparse.ArgumentParser(

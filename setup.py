@@ -20,8 +20,11 @@
 from setuptools import setup
 from setuptools.command.install import install
 import os
+import sys
 from os.path import join as pjoin
+import shutil
 
+            
 description = '''Utilities for copying and managing lab data'''
 
 setup(
@@ -42,3 +45,19 @@ setup(
         ]
     },
 )
+
+if 'install' in sys.argv or 'develop' in sys.argv:
+    from labdatatools.utils import labdata_preferences
+    plugins = labdata_preferences['plugins_folder']
+
+    # if the config directory tree doesn't exist, create it
+    if not os.path.exists(plugins):
+        os.makedirs(plugins)
+
+    # copy every file from given location to the specified ``CONFIG_PATH``
+    for fname in os.listdir('analysis'):
+        fpath = os.path.join('analysis', fname)
+        if not os.path.exists(pjoin(plugins,fname)):
+            shutil.copy(fpath, plugins)
+        else:
+            print('File already exists.')
