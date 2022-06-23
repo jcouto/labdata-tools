@@ -163,9 +163,12 @@ The commands are:
             description = 'list sessions for subjects in the database',
             usage = 'labdata sessions <subject_name>')
         
-        parser.add_argument('subject', action='store', default='', type=str)
-        parser.add_argument('-i','--includes', action='store', default=[], type=str, nargs='+')
-        parser.add_argument('-e','--excludes', action='store', default=[], type=str, nargs='+')
+        parser.add_argument('subject', action='store', default=[''], type=str, nargs='*')
+        parser.add_argument('-f','--filters', action='store', default=[], type=str, nargs='+')
+        parser.add_argument('-i','--includes', action='store', default=[],
+                            type=str, nargs='+')
+        parser.add_argument('-e','--excludes', action='store', default=[],
+                            type=str, nargs='+')        
         parser.add_argument('--files',action='store_true',default = False)
         
         
@@ -176,25 +179,31 @@ The commands are:
         #        inc[i] =  '*' + v
         #    if not v.endswith('*'):
         #        inc[i] +=  '*'
-        files = rclone_list_files(subject = args.subject,
-                                  filters = inc)
-        if not len(files):
-            print('Found no sessions.')
-            return
-        for ses in np.sort(files.session.unique()):
-            print(ses,flush=True)
-            t = files[files.session == ses]
-            for dtype in t.datatype.unique():
-                print('\t'+dtype, flush=True)
-                d = t[t.datatype == dtype]
-                if args.files:
-                    for i,f in d.iterrows():
-                        print('\t\t{0}'.format(f.filename))
-
+        for sub in args.subject:
+            files = rclone_list_files(subject = sub,
+                                      filters = args.filters,
+                                      includes = args.includes,
+                                      excludes = args.excludes)
+            if not len(files):
+                print('Found no sessions.')
+                return
+            for subject in np.sort(files.subject.unique()):
+                nfiles = files[files.subject == subject]
+                print(subject,flush=True)
+                for ses in np.sort(nfiles.session.unique()):
+                    print(' '+ses,flush=True)
+                    t = nfiles[nfiles.session == ses]
+                    for dtype in t.datatype.unique():
+                        print(' \t'+dtype, flush=True)
+                        d = t[t.datatype == dtype]
+                        if args.files:
+                            for i,f in d.iterrows():
+                                print('\t\t{0}'.format(f.filename))
+                            
     def get(self):
         parser = argparse.ArgumentParser(
             description = 'fetch data from the database',
-            usage = 'labdata get -a <subject_name>')
+            usage = 'labdata get <subject_name>')
         
         parser.add_argument('subject', action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-s','--session', action='store', default=[''], type=str,nargs='+')

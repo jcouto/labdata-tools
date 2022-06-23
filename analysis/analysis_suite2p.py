@@ -16,7 +16,7 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
                  fs = None,
                  nonrigid=True,
                  mesoscope = False,
-                 input_folder = 'twophoton',
+                 input_folder = 'two_photon',
                  **kwargs):
         super(AnalysisSuite2p,self).__init__(
             subject = subject,

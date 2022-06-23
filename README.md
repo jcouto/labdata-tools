@@ -5,7 +5,15 @@ Utilities to copy data to and from the data server through python using rclone.
 
 #### List sessions with suite2p or two_photon data:
 
-``labdata sessions JC027 -i suite2p two_photon``
+``labdata sessions JC027 -f suite2p two_photon``
+
+This takes a while if you don't specify subjects because it queries all files in the remote.
+
+You can also list multiple subjects:
+``labdata sessions JC027 JC066 JC065 -f suite2p two_photon``
+
+
+Use the ``--files`` flag to list also the files.
 
 #### Get all matlab files for a specific animal:
 

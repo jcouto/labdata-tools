@@ -30,7 +30,9 @@ def rclone_list_sessions(subject):
     else:
         return None
 
-def rclone_list_files(subject = '', filters = []):
+def rclone_list_files(subject = '', filters = [],
+                      includes = [],
+                      excludes = []):
     '''
     Gets a list of all files in the remote.
     Specify a subject to get only the first level.
@@ -38,15 +40,15 @@ def rclone_list_files(subject = '', filters = []):
     cmd = 'rclone ls {drive}:{folder}/{subject}'.format(
         subject=subject,
         **labdata_preferences['rclone'])
-    #if len(includes):
-    #    for i in includes:
-    #        cmd += ' --include {0}'.format(i)
-    #if len(excludes):
-    #    for i in excludes:
-    #        cmd += ' --exclude {0}'.format(i)
+    if len(includes):
+        for i in includes:
+            cmd += ' --include "{0}"'.format(i)
+    if len(excludes):
+        for i in excludes:
+            cmd += ' --exclude "{0}"'.format(i)
 
+    print(cmd,flush=True)
     out = check_output(cmd.split(' ')).decode("utf-8")
-    print(cmd)
     files = []
     for a in out.split('\n'):
         a = a.strip(' ')
@@ -55,17 +57,22 @@ def rclone_list_files(subject = '', filters = []):
             fname = a.replace(sz,'').strip(' ')
             dirname = os.path.dirname(fname)
             tmp = dirname.split('/')
+            sub = None
             session = None
             datatype = None
             if len(tmp)>=1:
                 s = 0
                 if subject == '':
                     s = 1
-                session = tmp[0+s]
-                if len(tmp)>=2:
-                    datatype = tmp[1+s]
+                if len(tmp)>= s+1:
+                    if subject == '':
+                        sub = tmp[0+s-1]
+                    else:
+                        sub = subject # main folder is the subject
+                    session = tmp[0+s]
+                    if len(tmp)>=s+2:
+                        datatype = tmp[1+s]
             include = False
-            
             for inn in filters:
                 if inn in fname:
                     include = True
@@ -78,6 +85,7 @@ def rclone_list_files(subject = '', filters = []):
                                   filesize = int(sz),
                                   filepath = fname,
                                   dirname = dirname,
+                                  subject = sub,
                                   session = session,
                                   datatype = datatype))
     return pd.DataFrame(files)
