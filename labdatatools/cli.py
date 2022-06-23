@@ -190,13 +190,13 @@ The commands are:
             if not len(files):
                 print('Found no sessions.')
                 continue
-            for subject in np.sort(files.subject.unique()):
+            for subject in natsorted(files.subject.unique()):
                 nfiles = files[files.subject == subject]
                 print(subject,flush=True)
-                for ses in np.sort(nfiles.session.unique()):
+                for ses in natsorted(nfiles.session.unique()):
                     print(' '+ses,flush=True)
                     t = nfiles[nfiles.session == ses]
-                    for dtype in t.datatype.unique():
+                    for dtype in natsorted(t.datatype.unique()):
                         print(' \t'+dtype, flush=True)
                         d = t[t.datatype == dtype]
                         if args.files:

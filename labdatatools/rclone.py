@@ -51,10 +51,11 @@ def rclone_list_files(subject = '', filters = [],
     out = check_output(cmd.split(' ')).decode("utf-8")
     files = []
     for a in out.split('\n'):
-        a = a.strip(' ')
-        if len(a):
-            sz = re.search(r'\d+', a).group()
-            fname = a.replace(sz,'').strip(' ')
+        a = a.strip(' ').split(' ')
+        if len(a)>1:
+            a[1] = ' '.join(a[1:])
+            sz = int(a[0])
+            fname = a[1]
             dirname = os.path.dirname(fname)
             tmp = dirname.split('/')
             sub = None
