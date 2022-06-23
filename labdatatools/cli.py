@@ -186,7 +186,7 @@ The commands are:
                                       excludes = args.excludes)
             if not len(files):
                 print('Found no sessions.')
-                return
+                continue
             for subject in np.sort(files.subject.unique()):
                 nfiles = files[files.subject == subject]
                 print(subject,flush=True)
