@@ -13,12 +13,12 @@ The commands are:
             
     subjects                            list subjects in the remote
     sessions  <SUBJECT>                 list sessions for a subject
-    get -a <SUBJECT> -s <SESSION>       get a dataset
+    get <SUBJECT> -s <SESSION>          get a dataset
 
     upload <SUBJECT (optional)>         uploads a dataset
 
-    run <ANALYSIS>                      Runs an analysis script
-    slurm <ANALYSIS>                    Submits an analysis script the queue
+    run <ANALYSIS> -a <SUBJECT> -s <SESSION>     Runs an analysis script
+    slurm <ANALYSIS> -a <SUBJECT> -s <SESSION>   Submits an analysis script the queue
             
 ''')
         parser.add_argument('command', help= 'type: labdata <command> -h for help')
@@ -166,6 +166,8 @@ The commands are:
         parser.add_argument('subject', action='store', default='', type=str)
         parser.add_argument('-i','--includes', action='store', default=[], type=str, nargs='+')
         parser.add_argument('-e','--excludes', action='store', default=[], type=str, nargs='+')
+        parser.add_argument('--files',action='store_true',default = False)
+        
         
         args = parser.parse_args(sys.argv[2:])
         inc = args.includes
@@ -182,14 +184,19 @@ The commands are:
         for ses in np.sort(files.session.unique()):
             print(ses,flush=True)
             t = files[files.session == ses]
-            print('\t'+'\n\t'.join(t.datatype.unique()), flush=True)
+            for dtype in t.datatype.unique():
+                print('\t'+dtype, flush=True)
+                d = t[t.datatype == dtype]
+                if args.files:
+                    for i,f in d.iterrows():
+                        print('\t\t{0}'.format(f.filename))
 
     def get(self):
         parser = argparse.ArgumentParser(
             description = 'fetch data from the database',
             usage = 'labdata get -a <subject_name>')
         
-        parser.add_argument('-a','--subject', action='store', default=[''], type=str,nargs='+')
+        parser.add_argument('subject', action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-s','--session', action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-d','--datatype', action='store', default=[''], type=str,nargs='+')
         parser.add_argument('-i','--includes', action='store', default=[], type=str, nargs='+')

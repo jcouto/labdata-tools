@@ -3,7 +3,7 @@ Utilities to copy data to and from the data server through python using rclone.
 
 ### Command line:
 
-#### List sessions with suite2p and two_photon data:
+#### List sessions with suite2p or two_photon data:
 
 ``labdata sessions JC027 -i suite2p two_photon``
 
@@ -13,11 +13,23 @@ Utilities to copy data to and from the data server through python using rclone.
 
 Or for datafiles with a specific name:
 
-``labdata get -a cy11 -i "*TheMudSkipper2*.mat"``
+``labdata get cy11 -i "*TheMudSkipper2*.mat"``
+
+#### Get all files from 2 sessions:
+
+``labdata get JC027 -s 20220220_000000 20220221_000000``
 
 #### List subjects in the database:
 
 ``labdata subjects``
+
+#### Upload data from the datapath directory
+
+``labdata upload``
+
+#### Upload data from a specific session
+
+``labdata upload JC066 -s 20220126_172829``
 
 ### Tutorial
 
