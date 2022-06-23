@@ -47,7 +47,7 @@ def rclone_list_files(subject = '', filters = [],
         for i in excludes:
             cmd += ' --exclude "{0}"'.format(i)
 
-    print(cmd,flush=True)
+    #print(cmd,flush=True)
     out = check_output(cmd.split(' ')).decode("utf-8")
     files = []
     for a in out.split('\n'):

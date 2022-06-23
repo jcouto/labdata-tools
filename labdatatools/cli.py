@@ -137,7 +137,10 @@ The commands are:
         parser.add_argument('-l','--bwlimit', action='store', default=None, type=int)
         parser.add_argument('--path-index', action='store',
                             default=0, type=int)
-        parser.add_argument('-e','--excludes', action='store', default=['.phy'], type=str, nargs='+')
+        parser.add_argument('-e','--excludes', action='store', default=
+                            ['.phy',
+                             '._.DS_Store',
+                             '.DS_Store'], type=str, nargs='+')
         parser.add_argument('--overwrite', action='store_true',
                             default=False)
         parser.add_argument
