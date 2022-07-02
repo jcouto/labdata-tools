@@ -1,5 +1,5 @@
 from .utils import *
-from .rclone import rclone_get_data
+from .rclone import rclone_get_data,rclone_upload_data
 
 def load_plugins():
     an = dict(files = glob(pjoin(
@@ -26,6 +26,7 @@ class BaseAnalysisPlugin(object):
                  excludes = [''],
                  bwlimit = None,
                  overwrite = False,
+                 upload = True,
                  arguments = [],
                  **kwargs):
 
@@ -37,7 +38,8 @@ class BaseAnalysisPlugin(object):
         self.datatypes = datatypes
         self.includes = includes
         self.excludes = excludes
-
+        self.overwrite = overwrite
+        self.upload = upload
         self.bwlimit = bwlimit # For upload
         self.input_folder = ''
         self.output_folder = 'analysis'
@@ -50,15 +52,17 @@ class BaseAnalysisPlugin(object):
                 self.session_keys.append(dict(datapath = self.prefs['paths'][0],
                                               subject = subject,
                                               session = session))
-                folders = glob(pjoin(self.session_keys['datapath'],
-                                     self.session_keys['subject'],
-                                     self.session_keys['session']))
+                k = self.session_keys[-1]
+                folders = glob(pjoin(k['datapath'],
+                                     k['subject'],
+                                     k['session']))
                 if len(folders):
                     self.sessions_folders.append(folders[0])
-                raise(OSError('[{0}] Could not find session {1} subject {2}'.format(
-                    self.name,
-                    self.session,
-                    self.subject)))
+                else:
+                    raise(OSError('[{0}] Could not find session {1} subject {2}'.format(
+                        self.name,
+                        self.session,
+                        self.subject)))
         return self.sessions_folders
     
     def process(self,fetch = True, push = True):
@@ -83,25 +87,30 @@ class BaseAnalysisPlugin(object):
     def fetch_data(self):
         if not self.subject is None:
             if not self.session is None:
-                for subject in args.subject:
-                    for session in args.session:
-                        for datatype in args.datatypes:
+                for subject in self.subject:
+                    for session in self.session:
+                        for datatype in self.datatypes:
+                            print('Getting data for session: {0} {1}'.format(subject,session))
                             rclone_get_data(subject = subject,
                                             session = session,
                                             datatype = datatype,
-                                            includes = args.includes,
-                                            excludes = args.excludes)                
+                                            includes = self.includes,
+                                            excludes = self.excludes)                
         self.get_sessions_folders()
 
     def put_data(self):
-        rclone_upload_data(subject = self.subject,
-                           session = self.session,
-                           datatype = self.input_folder,
-                           path_idx = 0,
-                           bwlimit = self.bwlimit,
-                           overwrite = self.overwrite,
-                           excludes = self.excludes)
-    
+        if self.upload:
+            for subject in self.subject:
+                for session in self.session:
+                    print('Sending data for session: {0} {1}'.format(subject,session))
+                    rclone_upload_data(subject = subject,
+                                       session = session,
+                                       datatype = self.output_folder,
+                                       path_idx = 0,
+                                       bwlimit = self.bwlimit,
+                                       overwrite = self.overwrite,
+                                       excludes = self.excludes)
+            
     def slurm(self,
               memory = None,
               ncpus= None,

@@ -123,7 +123,7 @@ The commands are:
         analysis.parse_arguments(analysisargs)
 
         analysis.validate_parameters()
-        
+        analysis.process()
     def upload(self):
         parser = argparse.ArgumentParser(
             description = 'Upload datafolder in "path" to the remote.',
