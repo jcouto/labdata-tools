@@ -47,6 +47,10 @@ The commands are:
                             action='store', default=[], type=str, nargs='+')
         parser.add_argument('-e','--excludes',
                             action='store', default=[], type=str, nargs='+')
+        parser.add_argument('--overwrite', action='store_true',
+                            default=False)
+        parser.add_argument('--no-upload', action='store_false',
+                            default=True)
         parser.add_argument('-q','--queue',
                             action='store', default=None, type=str)
         parser.add_argument('-m','--memory',
@@ -79,7 +83,9 @@ The commands are:
                 session = args.session,
                 datatypes = args.datatypes,
                 includes = args.includes,
-                excludes = args.excludes)
+                excludes = args.excludes,
+                overwrite = args.overwrite,
+                upload = args.no_upload)
         analysis.parse_arguments(analysisargs)
         analysis.validate_parameters()
 
@@ -100,6 +106,11 @@ The commands are:
                             action='store', default=[], type=str, nargs='+')
         parser.add_argument('-e','--excludes',
                             action='store', default=[], type=str, nargs='+')
+        parser.add_argument('--overwrite', action='store_true',
+                            default=False)
+        parser.add_argument('--no-upload', action='store_false',
+                            default=True)
+
         sysargs = sys.argv[2:]
         analysisargs = []
         if '--' in sys.argv:
@@ -119,11 +130,14 @@ The commands are:
                 session = args.session,
                 datatypes = args.datatypes,
                 includes = args.includes,
-                excludes = args.excludes)
+                excludes = args.excludes,
+                overwrite = args.overwrite,
+                upload = args.no_upload)
         analysis.parse_arguments(analysisargs)
 
         analysis.validate_parameters()
         analysis.process()
+
     def upload(self):
         parser = argparse.ArgumentParser(
             description = 'Upload datafolder in "path" to the remote.',
