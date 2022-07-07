@@ -74,9 +74,15 @@ The commands are:
         if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
             print('Available analysis [{0}]'.format(
                 labdata_preferences['plugins_folder']))
-            for p in plugins:
-                print('\t'+p['name'])
-            return
+            if len(plugins):
+                for p in plugins:
+                    print('\t'+p['name'])
+            else:
+                print('''
+                Add plugins to the folder to start. 
+                The repository has examples in the analysis folder.
+                ''')    
+            return 
         analysis = plugins[
             [p['name'] for p in plugins].index(args.analysis)]['object'](
                 subject = args.subject,
@@ -121,8 +127,15 @@ The commands are:
         if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
             print('Available analysis [{0}]'.format(
                 labdata_preferences['plugins_folder']))
-            for p in plugins:
-                print('\t'+p['name'])
+            if len(plugins):
+                for p in plugins:
+                    print('\t'+p['name'])
+            else:
+                print('''
+                Add plugins to the folder to start. 
+                The repository has examples in the analysis folder.
+                ''')
+            return 
 
         analysis = plugins[
             [p['name'] for p in plugins].index(args.analysis)]['object'](
