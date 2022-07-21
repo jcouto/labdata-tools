@@ -265,10 +265,11 @@ The commands are:
         
         
         args = parser.parse_args(sys.argv[2:])        
-        cleanup_local_files(subject = args.subject,
-                            checksum = args.checksum,
-                            dry_run = args.dry_run,
-                            keep_recent_weeks = args.keep_recent_weeks)
+        from cleanup import clean_local_files
+        clean_local_files(subject = args.subject,
+                          checksum = args.checksum,
+                          dry_run = args.dry_run,
+                          keep_recent_weeks = args.keep_recent_weeks)
                 
 def main():
     CLI_parser()
