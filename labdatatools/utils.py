@@ -111,6 +111,8 @@ def get_labdata_preferences(prefpath = None):
     if prefpath is None:
         prefpath = LABDATA_FILE
     preffolder = os.path.dirname(prefpath)
+    if not os.path.exists(preffolder):
+        os.makedirs(preffolder)
     if not os.path.isfile(prefpath):
         with open(prefpath, 'w') as outfile:
             json.dump(default_labdata_preferences, 
