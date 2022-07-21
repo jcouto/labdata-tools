@@ -10,7 +10,7 @@ import os
 from glob import glob
 from natsort import natsorted
 
-LABDATA_FILE= pjoin(os.path.expanduser('~'),'.labdatatools')
+LABDATA_FILE= pjoin(os.path.expanduser('~'),'labdatatools','preferences.json')
 
 default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                'path_format':'{subject}/{session}/{datatype}',
@@ -21,7 +21,7 @@ default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
 
 def list_subjects():
     subjects = []
-    for path in labdata_preferences['paths']['serverpaths']:
+    for path in labdata_preferences['paths']:
         tmp = glob(pjoin(path,'*'))
         for t in tmp:
             if not os.path.isdir(t):
@@ -60,7 +60,9 @@ def list_files(subject = '', extension=''):
                               relativepath = t.replace(path,''),
                               filesize = stats.st_size,
                               serverpath = '/'.join(
-                                  os.path.normpath(t.replace(path,'')).split(os.path.sep)),
+                                  os.path.normpath(t.replace(
+                                      path.replace(subject,''),'')).split(
+                                          os.path.sep)),
                               mtime = stats.st_mtime))
     return pd.DataFrame(files)
 

@@ -131,7 +131,8 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
         files = []
         for f in db['data_path']:
             files.extend(glob(pjoin(f,'**','*.sbx'),recursive=True))
-        files = list(filter(lambda x: self.file_filter in x,files))
+        if not self.file_filter is None:
+            files = list(filter(lambda x: self.file_filter in x,files))
         if len(files):
             db['tiff_list'] = files
             ops['input_format'] = 'sbx'
@@ -155,8 +156,8 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
                 files.extend(glob(pjoin(f,'**','*.tif'),recursive=True))
                 files.extend(glob(pjoin(f,'**','*.TIFF'),recursive=True))
                 files.extend(glob(pjoin(f,'**','*.TIF'),recursive=True))
-            files = list(filter(lambda x: self.file_filter in x,files))
-            print(files)
+            if not self.file_filter is None:
+                files = list(filter(lambda x: self.file_filter in x,files))
             raise(NotImplementedError('This needs to be tested'))
         
         if not len(files):

@@ -56,6 +56,8 @@ def rclone_list_files(subject = '', filters = [],
             a[1] = ' '.join(a[1:])
             sz = int(a[0])
             fname = a[1]
+            if not subject  == '':
+                fname = subject+'/'+fname
             dirname = os.path.dirname(fname)
             tmp = dirname.split('/')
             sub = None
@@ -63,8 +65,6 @@ def rclone_list_files(subject = '', filters = [],
             datatype = None
             if len(tmp)>=1:
                 s = 0
-                if subject == '':
-                    s = 1
                 if len(tmp)>= s+1:
                     if subject == '':
                         sub = tmp[0+s-1]

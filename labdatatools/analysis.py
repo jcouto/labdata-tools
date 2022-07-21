@@ -28,10 +28,12 @@ class BaseAnalysisPlugin(object):
                  overwrite = False,
                  upload = True,
                  arguments = [],
+                 partial_run = None, # 'get', 'run' or 'put'
                  **kwargs):
 
         self.description = 'Not Implemented'
         self.name = ''
+        self.partial_run = partial_run
         self.prefs = labdata_preferences
         self.subject = subject
         self.session = session
@@ -68,10 +70,19 @@ class BaseAnalysisPlugin(object):
     def process(self,fetch = True, push = True):
         '''Run an analysis locally '''
         self.validate_parameters()
+        if self.partial_run in ['get','fetch']:
+            self.fetch_data()
+            return
+        elif self.partial_run in ['run','process']:
+            self._run()
+            return
+        elif self.partial_run in ['put','upload']:
+            self.put_data()
+            return
         self.fetch_data()
         self._run()
         self.put_data()
-        
+
     def _run(self):
         raise(NotImplemented(
             'Use this method to write code to run the analysis.'))
@@ -109,14 +120,6 @@ class BaseAnalysisPlugin(object):
                                        path_idx = 0,
                                        bwlimit = self.bwlimit,
                                        overwrite = self.overwrite,
-                                       excludes = self.excludes)
-            
-    def slurm(self,
-              memory = None,
-              ncpus= None,
-              queue = None,
-              **kwargs):
-        raise(NotImplemented('Run analysis on slurm.'))
-        
+                                       excludes = self.excludes)        
 
         

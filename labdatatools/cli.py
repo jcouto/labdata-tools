@@ -256,10 +256,18 @@ The commands are:
             usage = 'labdata clean_local')
 
         # todo: add stuff to select only some animals
+        parser.add_argument('--subject', action='store', default=None, type=str)
         parser.add_argument('-e','--except', action='store', default=[], type=str,nargs='+')
+        parser.add_argument('-c','--checksum', action='store_false', default=True, type=bool)
+        parser.add_argument('-w','--keep-recent-weeks', action='store', default=5, type=int)
+        parser.add_argument('--dry-run', action='store_true', default=False, type=bool)
+        
         
         args = parser.parse_args(sys.argv[2:])        
-
+        cleanup_local_files(subject = args.subject,
+                            checksum = args.checksum,
+                            dry_run = args.dry_run,
+                            keep_recent_weeks = args.keep_recent_weeks)
         
         
 def main():
