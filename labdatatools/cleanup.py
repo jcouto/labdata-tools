@@ -1,5 +1,5 @@
+from .utils import *
 from .rclone import rclone_list_files
-from .utils import list_files
 
 
 def clean_local_files(subject = None, checksum = True, dry_run = False, keep_recent_weeks = 5):
