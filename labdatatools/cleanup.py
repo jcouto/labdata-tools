@@ -1,6 +1,6 @@
 from .utils import *
 from .rclone import rclone_list_files
-
+from tqdm import tqdm
 
 def clean_local_files(subject = None, checksum = True, dry_run = False, keep_recent_weeks = 5):
     to_delete = []
