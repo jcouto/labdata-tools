@@ -265,7 +265,7 @@ The commands are:
         
         
         args = parser.parse_args(sys.argv[2:])        
-        from cleanup import clean_local_files
+        from .cleanup import clean_local_files
         clean_local_files(subject = args.subject,
                           checksum = args.checksum,
                           dry_run = args.dry_run,
