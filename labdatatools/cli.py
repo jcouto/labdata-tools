@@ -16,6 +16,7 @@ The commands are:
     get <SUBJECT> -s <SESSION>          get a dataset
 
     upload <SUBJECT (optional)>         uploads a dataset
+    clean_local                         deletes old files from the local computer
 
     run <ANALYSIS> -a <SUBJECT> -s <SESSION>     Runs an analysis script
     slurm <ANALYSIS> -a <SUBJECT> -s <SESSION>   Submits an analysis script the queue
@@ -253,14 +254,14 @@ The commands are:
     def clean_local(self):
         parser = argparse.ArgumentParser(
             description = 'fetch data from the database',
-            usage = 'labdata clean_local')
+            usage = 'labdata clean_local --subject <SUBJECT> --checksum --keep-recent-weeks 5 --dry-run')
 
         # todo: add stuff to select only some animals
         parser.add_argument('--subject', action='store', default=None, type=str)
         parser.add_argument('-e','--except', action='store', default=[], type=str,nargs='+')
-        parser.add_argument('-c','--checksum', action='store_false', default=True, type=bool)
-        parser.add_argument('-w','--keep-recent-weeks', action='store', default=5, type=int)
-        parser.add_argument('--dry-run', action='store_true', default=False, type=bool)
+        parser.add_argument('-c','--checksum', action='store_false', default=True)
+        parser.add_argument('-w','--keep-recent-weeks', action='store', default=5)
+        parser.add_argument('--dry-run', action='store_true', default=False)
         
         
         args = parser.parse_args(sys.argv[2:])        
@@ -268,8 +269,7 @@ The commands are:
                             checksum = args.checksum,
                             dry_run = args.dry_run,
                             keep_recent_weeks = args.keep_recent_weeks)
-        
-        
+                
 def main():
     CLI_parser()
 
