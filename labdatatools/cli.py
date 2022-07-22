@@ -167,6 +167,7 @@ The commands are:
                             default=0, type=int)
         parser.add_argument('-e','--excludes', action='store', default=
                             ['.phy',
+                             '.ipynb_checkpoints',
                              '._.DS_Store',
                              '.DS_Store'], type=str, nargs='+')
         parser.add_argument('--overwrite', action='store_true',
