@@ -2,7 +2,8 @@ from .utils import *
 from .rclone import rclone_list_files
 from tqdm import tqdm
 
-def clean_local_files(subject = None, checksum = True, dry_run = False, keep_recent_weeks = 5):
+def clean_local_files(subject = None, checksum = True, dry_run = False, keep_recent_weeks = 5,
+                      exceptions = ['Session Settings','Session Data']):
     to_delete = []
     to_keep = []
     subjects = list_subjects()
@@ -10,6 +11,13 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
         subjects = subjects[subjects.subject == subject]
     for i,s in subjects.iterrows():
         localfiles = list_files(s.subject)
+        # don't look at the files if in exceptions
+        exceptionidx = []
+        for i,f in enumerate(localfiles.filepath):
+            for e in exceptions:
+                if e in f:
+                    exceptionidx.append(i)
+        localfiles = localfiles.drop(localfiles.index[exceptionidx])
         if localfiles.shape[0]<1:
             print('No data for subject {0}'.format(s.subject))
             continue
