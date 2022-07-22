@@ -260,7 +260,7 @@ The commands are:
         parser.add_argument('--subject', action='store', default=None, type=str)
         parser.add_argument('-e','--except', action='store', default=[], type=str,nargs='+')
         parser.add_argument('-n','--no-checksum', action='store_false', default=True)
-        parser.add_argument('-w','--keep-recent-weeks', action='store', default=5)
+        parser.add_argument('-w','--keep-recent-weeks', action='store', type = int, default=5)
         parser.add_argument('--dry-run', action='store_true', default=False)
         
         
