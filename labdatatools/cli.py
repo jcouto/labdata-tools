@@ -254,12 +254,12 @@ The commands are:
     def clean_local(self):
         parser = argparse.ArgumentParser(
             description = 'fetch data from the database',
-            usage = 'labdata clean_local --subject <SUBJECT> --checksum --keep-recent-weeks 5 --dry-run')
+            usage = 'labdata clean_local --subject <SUBJECT> --no-checksum --keep-recent-weeks 5 --dry-run')
 
         # todo: add stuff to select only some animals
         parser.add_argument('--subject', action='store', default=None, type=str)
         parser.add_argument('-e','--except', action='store', default=[], type=str,nargs='+')
-        parser.add_argument('-c','--checksum', action='store_false', default=True)
+        parser.add_argument('-n','--no-checksum', action='store_false', default=True)
         parser.add_argument('-w','--keep-recent-weeks', action='store', default=5)
         parser.add_argument('--dry-run', action='store_true', default=False)
         
@@ -267,7 +267,7 @@ The commands are:
         args = parser.parse_args(sys.argv[2:])        
         from .cleanup import clean_local_files
         clean_local_files(subject = args.subject,
-                          checksum = args.checksum,
+                          checksum = args.no_checksum,
                           dry_run = args.dry_run,
                           keep_recent_weeks = args.keep_recent_weeks)
                 

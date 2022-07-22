@@ -10,6 +10,9 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
         subjects = subjects[subjects.subject == subject]
     for i,s in subjects.iterrows():
         localfiles = list_files(s.subject)
+        if localfiles.shape[0]<1:
+            print('No data for subject {0}'.format(s.subject))
+            continue
         localfiles['localfolder'] = localfiles.filepath.map(os.path.dirname)
         localfiles['serverfolder'] = localfiles.serverpath.map(os.path.dirname)
         if checksum:
@@ -28,7 +31,7 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
                     print(out)
         else:
             remotefiles = rclone_list_files(s.subject) 
-            for i,l in localfiles.iterrows():
+            for j,l in localfiles.iterrows():
                 r = remotefiles[remotefiles.filepath == l.serverpath]
                 if r.shape[0]>0:
                     r = r.iloc[0]
@@ -55,7 +58,7 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
     print('Found {0} local files on the server.'.format(to_delete.shape[0]))
     from datetime import datetime, timedelta
     deleteidx = []
-    for i,f in to_delete.iterrows():
+    for i,(_,f) in enumerate(to_delete.iterrows()):
         mtime = datetime.fromtimestamp(f.mtime)
         now = datetime.today()
         if (now-mtime) > timedelta(weeks=keep_recent_weeks):
@@ -64,13 +67,22 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
     deleted = []
     for i in tqdm(deleteidx):
         if not dry_run:
-            os.remove(localfiles.filepath.loc[i])
-        deleted.append(localfiles.loc[i])
+            os.remove(to_delete.iloc[i].filepath)
+        deleted.append(to_delete.iloc[i])
 
     if len(deleted):
         print('Deleted {0} local files.'.format(len(deleted)))
     deleted = pd.DataFrame(deleted)
     if to_keep.shape[0]>0:
         print('{0} files were kept.'.format(to_keep.shape[0]))
-    # TODO: check empty folders and delete them
+    # TODO: this recursive is a bit of a hack
+    for i in range(5):
+        for f in list(os.walk(labdata_preferences['paths'][0]))[1:]:
+            if not f[2] and not f[1]:
+                try:
+                    os.rmdir(f[0])
+                except:
+                    pass
+                finally:
+                    print('Removing {0}'.format(f[0]))
     return deleted,to_delete,to_keep # Deleted, On the server, Not on server
