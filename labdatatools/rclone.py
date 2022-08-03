@@ -64,7 +64,7 @@ def rclone_list_files(subject = '', filters = [],
             session = None
             datatype = None
             if len(tmp)>=1:
-                s = 0
+                s = 1
                 if len(tmp)>= s+1:
                     if subject == '':
                         sub = tmp[0+s-1]

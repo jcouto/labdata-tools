@@ -158,7 +158,8 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
                 files.extend(glob(pjoin(f,'**','*.TIF'),recursive=True))
             if not self.file_filter is None:
                 files = list(filter(lambda x: self.file_filter in x,files))
-            raise(NotImplementedError('This needs to be tested'))
+            if len(files):
+                raise(NotImplementedError('This needs to be tested'))
         
         if not len(files):
             self.upload = False

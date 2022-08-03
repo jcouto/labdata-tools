@@ -83,6 +83,46 @@ class BaseAnalysisPlugin(object):
         self._run()
         self.put_data()
 
+    def slurm(self, analysisargs,
+              conda_environment = None,
+              ntasks=None,
+              ncpuspertask = None,
+              memory=None,
+              walltime=None,
+              partition=None):
+        cmd = 'labdata run {0}'.format(self.name.lower())
+        if not self.subject == ['']: 
+            cmd += ' -a {0}'.format(' '.join(self.subject))
+        if not self.session == ['']: 
+            cmd += ' -s {0}'.format(' '.join(self.session))
+        if not self.datatypes == ['']: 
+            cmd += ' -d {0}'.format(' '.join(self.datatypes))
+        if not self.includes == []: 
+            cmd += ' -i {0}'.format(' '.join(self.includes))
+        if not self.excludes ==[]: 
+            cmd += ' -e {0}'.format(' '.join(self.excludes))
+        if self.overwrite:
+            cmd += ' --overwrite'
+        if len(analysisargs):
+            cmd += ' ' + ' '.join(analysisargs)    
+        cmd = self.parse_slurm_cmd(cmd)
+        from .slurm import submit_slurm_job
+        
+        submit_slurm_job(jobname=self.name.lower(),
+                         command=cmd,
+                         ntasks=ntasks,
+                         ncpuspertask = ncpuspertask,
+                         memory=memory,
+                         walltime=None,
+                         partition=partition,
+                         conda_environment=None,
+                         module_environment=None,
+                         mail=None,
+                         sbatch_append='')
+        
+    def parse_slurm_cmd(self, cmd):
+        '''Use this to change the command from a subclass.'''
+        return cmd
     def _run(self):
         raise(NotImplemented(
             'Use this method to write code to run the analysis.'))

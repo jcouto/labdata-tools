@@ -60,7 +60,6 @@ The commands are:
         parser.add_argument('--list-queues',action='store_true',default = False)
         parser.add_argument('--list-jobs',action='store_true',default = False)
 
-        
         sysargs = sys.argv[2:]
         analysisargs = []
         if '--' in sys.argv:
@@ -95,6 +94,12 @@ The commands are:
                 upload = args.no_upload)
         analysis.parse_arguments(analysisargs)
         analysis.validate_parameters()
+        analysis.slurm(analysisargs,
+                       conda_environment = None,
+                       ncpuspertask = args.ncpus,
+                       memory=args.memory,
+                       walltime=None,
+                       partition=args.queue)
 
         
     def run(self):
@@ -258,7 +263,7 @@ The commands are:
             usage = 'labdata clean_local --subject <SUBJECT> --no-checksum --keep-recent-weeks 5 --dry-run')
 
         # todo: add stuff to select only some animals
-        parser.add_argument('--subject', action='store', default=None, type=str)
+        parser.add_argument('-s','--subject', action='store', default=None, type=str)
         parser.add_argument('-e','--except', action='store', default=[], type=str,nargs='+')
         parser.add_argument('-n','--no-checksum', action='store_false', default=True)
         parser.add_argument('-w','--keep-recent-weeks', action='store', type = int, default=5)

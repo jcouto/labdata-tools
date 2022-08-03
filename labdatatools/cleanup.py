@@ -77,7 +77,6 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
         if not dry_run:
             os.remove(to_delete.iloc[i].filepath)
         deleted.append(to_delete.iloc[i])
-
     if len(deleted):
         print('Deleted {0} local files.'.format(len(deleted)))
     deleted = pd.DataFrame(deleted)
