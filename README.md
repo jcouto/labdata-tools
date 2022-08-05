@@ -1,5 +1,6 @@
 # labdata-tools
 Utilities to copy data to and from the data server through python using rclone.
+Run custom pipelines from defined data locations. 
 
 ### Command line:
 
@@ -43,7 +44,8 @@ Or for datafiles with a specific name:
 
 Look at the ``examples`` folder.
 
-### Instalation
+To list the available commands: ``labdata --help``
+### Installation
 
 Clone the repository to a folder in your computer and do:
 
