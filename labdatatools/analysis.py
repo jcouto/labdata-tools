@@ -113,9 +113,9 @@ class BaseAnalysisPlugin(object):
                          ntasks=ntasks,
                          ncpuspertask = ncpuspertask,
                          memory=memory,
-                         walltime=None,
+                         walltime=walltime,
                          partition=partition,
-                         conda_environment=None,
+                         conda_environment=conda_environment,
                          module_environment=None,
                          mail=None,
                          sbatch_append='')
@@ -123,6 +123,7 @@ class BaseAnalysisPlugin(object):
     def parse_slurm_cmd(self, cmd):
         '''Use this to change the command from a subclass.'''
         return cmd
+    
     def _run(self):
         raise(NotImplemented(
             'Use this method to write code to run the analysis.'))

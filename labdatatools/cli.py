@@ -68,8 +68,10 @@ The commands are:
         args = parser.parse_args(sysargs)
         if args.list_queues:
             os.system('sinfo')
+            return
         if args.list_jobs:
             os.system('squeue')
+            return
         plugins = load_plugins()
         if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
             print('Available analysis [{0}]'.format(
@@ -100,7 +102,6 @@ The commands are:
                        memory=args.memory,
                        walltime=None,
                        partition=args.queue)
-
         
     def run(self):
         parser = argparse.ArgumentParser(
