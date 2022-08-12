@@ -160,7 +160,12 @@ Actions are: create, extract, label, train, run
         configpath = self.get_project_folder()
         if not os.path.exists(os.path.dirname(configpath)):
             os.makedirs(os.path.dirname(configpath))
-            os.makedirs(pjoin(os.path.dirname(configpath),'videos')) # because dlc is psychotic
+            from datetime import datetime
+            date = datetime.today().strftime('%Y-%m-%d')
+            os.makedirs(pjoin(os.path.dirname(configpath),
+                              '{0}-{1}-{2}'.format(self.subject[0],
+                                                   self.experimenter,
+                                                   date),'videos')) # because dlc is psychotic
         import deeplabcut as dlc
         dlc.create_new_project(self.subject[0], self.experimenter, self.get_video_path(),
                                working_directory=configpath,
