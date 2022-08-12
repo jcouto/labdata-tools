@@ -11,6 +11,8 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
         subjects = subjects[subjects.subject == subject]
     for i,s in subjects.iterrows():
         localfiles = list_files(s.subject)
+        if not len(localfiles):
+            continue
         # don't look at the files if in exceptions
         exceptionidx = []
         for i,f in enumerate(localfiles.filepath):

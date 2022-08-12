@@ -60,7 +60,10 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         parser.add_argument('--video-extension',
                             action='store', default='.avi', type=str)
         parser.add_argument('--experimenter',default=os.getlogin(),type=str)
-        parser.add_argument('--open-result', action='store_true' ,default = False)
+        parser.add_argument('--extract-mode', action='store', default = 'manual')
+        parser.add_argument('--extract-algo', action='store', default = 'kmeans')
+        parser.add_argument('--extract-user-feedback', action='store_false', default = True)
+        parser.add_argument('--extract-crop', action='store_true' ,default = False)
 
         args = parser.parse_args(arguments[1:])
 
@@ -70,6 +73,10 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         self.video_filter = args.video_filter
         self.video_extension = args.video_extension
         self.experimenter = args.experimenter
+        self.extractparams = dict(mode = args.extract_mode,
+                                  algo = args.extract_algo,
+                                  userfeedback = args.extract_user_feedback,
+                                  crop = args.extract_crop)
         self.action = args.action
         if self.action == 'create':
             self._run = self._create_project
@@ -81,6 +88,7 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
             self._run == self._run_dlc
         else:
             raise(ValueError('Available commands are: create, extract, label, and run.'))
+        
     def get_project_folder(self):
         self.session_folders = self.get_sessions_folders()
         if self.labeling_session is None:
@@ -106,13 +114,11 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
                     if self.video_filter in f:
                         video_files.append(f)
         return video_files
+    
     def _create_project(self):
-        #import deeplabcut as dlc
         # the config file needs to be read and the path updated every time.
         # That is because it uses global paths..
         configpath = self.get_project_folder()
-
-        self.upload = False
         if not os.path.exists(os.path.dirname(configpath)):
             os.makedirs(configpath)
         import deeplabcut as dlc
@@ -121,6 +127,14 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
                                copy_videos=False,
                                multianimal=False)
         
+    def _extract_frames_gui(self):
+        configpath = self.get_project_folder()
+        if not os.path.exists(os.path.dirname(configpath)):
+            os.makedirs(configpath)
+        import deeplabcut as dlc
+        dlc.extract_frames(configpath,
+                           **self.extractparams)
+
     def _open_gui(self):
         # list_stat files
         self.session_folders = self.get_sessions_folders()
