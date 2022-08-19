@@ -125,7 +125,7 @@ class BaseAnalysisPlugin(object):
         return cmd
     
     def _run(self):
-        raise(NotImplemented(
+        raise(NotImplementedError(
             'Use this method to write code to run the analysis.'))
 
     def parse_arguments(self,arguments):
@@ -136,7 +136,7 @@ class BaseAnalysisPlugin(object):
         'This method is ran first '
         pass
     
-    def fetch_data(self):
+    def fetch_data(self,overwrite = False):
         if not self.subject is None:
             if not self.session is None:
                 for subject in self.subject:
@@ -146,6 +146,7 @@ class BaseAnalysisPlugin(object):
                             rclone_get_data(subject = subject,
                                             session = session,
                                             datatype = datatype,
+                                            overwrite = overwrite,
                                             includes = self.includes,
                                             excludes = self.excludes)                
         self.get_sessions_folders()

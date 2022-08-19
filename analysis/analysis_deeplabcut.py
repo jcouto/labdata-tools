@@ -85,16 +85,17 @@ Actions are: create, extract, label, train, run
                                   userfeedback = args.extract_user_feedback,
                                   crop = args.extract_crop)
         self.action = args.action
+        print(self.action)
         if self.action == 'create':
             self._run = self._create_project
         elif self.action == 'extract':
             self._run = self._extract_frames_gui
         elif self.action == 'label':
-            self._run == self._manual_annotation
+            self._run = self._manual_annotation
         elif self.action == 'train':
-            self._run == self._train_dlc
+            self._run = self._train_dlc
         elif self.action == 'run':
-            self._run == self._run_dlc
+            self._run = self._run_dlc
         else:
             raise(ValueError('Available commands are: create, extract, label, and run.'))
             
@@ -126,9 +127,10 @@ Actions are: create, extract, label, train, run
                             self.labeling_folder)
         if os.path.exists(config_path):
             # try to get it from the cloud.
-            rclone_get_data(subject = self.labeling_subject,
-                            session = self.labeling_session,
-                            datatype = self.labeling_folder)                
+            if not self.partial_run in ['run', 'process']:
+                rclone_get_data(subject = self.labeling_subject,
+                                session = self.labeling_session,
+                                datatype = self.labeling_folder)                
         # search for files
         if os.path.exists(config_path):
             folders = glob(pjoin(config_path,'*'))
@@ -205,7 +207,7 @@ Actions are: create, extract, label, train, run
                           autotune=False,
                           displayiters=100,
                           saveiters=15000,
-                          maxiters=30000,
+                          maxiters=300000,
                           allow_growth=True)
 
     def _run_dlc(self):

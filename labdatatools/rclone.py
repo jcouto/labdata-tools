@@ -95,6 +95,7 @@ def rclone_get_data(path_format = None,
                     includes = [],
                     excludes = [],
                     ipath = 0,
+                    overwrite = False,
                     verbose = True,
                     **kwargs):
     '''
@@ -132,6 +133,8 @@ Note:
     if len(excludes):
         for i in excludes:
             cmd += ' --exclude {0}'.format(i)
+    if not overwrite:
+        cmd += ' --ignore-existing'
     if verbose:
         print(cmd)
     process = Popen(cmd, shell=True, 
