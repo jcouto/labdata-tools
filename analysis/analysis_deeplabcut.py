@@ -45,30 +45,33 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
 Animal pose analysis.
 Actions are: create, extract, label, train, run
 ''',
-            usage = 'deeplabcut -a <subject> -s <session> -- create|extract|label|run <PARAMETERS>')
+            usage = 'deeplabcut -a <subject> -s <session> -- create|extract|label|train|run <PARAMETERS>')
         
         parser.add_argument('action',
-                            action='store', type=str)
+                            action='store', type=str, help = "action to perform (CREATE project, EXTRACT frames, manual LABEL frames, TRAIN the network, RUN the analysis on a dataset)")
         parser.add_argument('--label-subject',
-                            action='store', default=None, type=str)
+                            action='store', default=None, type=str, help = "specity subject used for initial labeling (used when analyzing new videos)")
         parser.add_argument('--label-session',
-                            action='store', default=None, type=str)
+                            action='store', default=None, type=str, help = "specify session used for initial labeling (used when analyzing new videos)")
         parser.add_argument('-c','--example-config',
                             action='store', default='headfixed_side', type=str)
         parser.add_argument('--start',
-                            action='store', default=0, type=float)
+                            action='store', default=0, type=float, help = "specify start frame for extracting outlier frames (not implemented yet)")
         parser.add_argument('--stop',
-                            action='store', default=1, type=float)
+                            action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames (not implemented yet)")
         parser.add_argument('-f','--video-filter',
-                            action='store', default='cam0', type=str)
+                            action='store', default='cam0',
+                            type=str,
+                            help = "indicate which video to load: cam0 (default) for lateral view and cam1 for bottom view")
         parser.add_argument('--video-extension',
-                            action='store', default='.avi', type=str)
-        parser.add_argument('--experimenter',default=os.getlogin(),type=str)
-        parser.add_argument('--labeling-session',default=None,type=str)
-        parser.add_argument('--extract-mode', action='store', default = 'manual')
-        parser.add_argument('--extract-algo', action='store', default = 'kmeans')
-        parser.add_argument('--extract-user-feedback', action='store_false', default = True)
-        parser.add_argument('--extract-crop', action='store_true' ,default = False)
+                            action='store', default='.avi', type=str, help = "specify video extension, default is .avi")
+        parser.add_argument('--experimenter',default=os.getlogin(),type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
+        parser.add_argument('--extract-mode', action='store', default = 'manual', help = "specify if extraction ocurs manual (default) or automatic")
+        parser.add_argument('--extract-algo', action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default)")
+        parser.add_argument('--extract-nouser-feedback', action='store_false',
+                            default = True,
+                            help="Use user feedback for extraction (default FEEDBACK)")
+        parser.add_argument('--extract-crop', action='store_true' ,default = False, help = "specify if user wants to crop video before extracting frames (default is False)")
 
         args = parser.parse_args(arguments[1:])
 
@@ -82,7 +85,7 @@ Actions are: create, extract, label, train, run
         
         self.extractparams = dict(mode = args.extract_mode,
                                   algo = args.extract_algo,
-                                  userfeedback = args.extract_user_feedback,
+                                  userfeedback = args.extract_nouser_feedback,
                                   crop = args.extract_crop)
         self.action = args.action
         print(self.action)
@@ -135,11 +138,10 @@ Actions are: create, extract, label, train, run
         if os.path.exists(config_path):
             folders = glob(pjoin(config_path,'*'))
             if len(folders):
-                folders = list(filter(os.path.isdir,folders))
+                folders = list(filter(os.path.isdir,folders)) 
+                folders = list(filter(lambda x: self.experimenter in x,folders))
             if len(folders):
                 config_path = pjoin(config_path,folders[0],'config.yaml')
-            if len(folders)>1:
-                print('There are multiple projects, using the first one.')
         return config_path
 
     def get_video_path(self):
@@ -168,12 +170,13 @@ Actions are: create, extract, label, train, run
                               '{0}-{1}-{2}'.format(self.subject[0],
                                                    self.experimenter,
                                                    date),'videos')) # because dlc is psychotic
-        import deeplabcut as dlc
-        dlc.create_new_project(self.subject[0], self.experimenter, self.get_video_path(),
-                               working_directory=configpath,
-                               copy_videos=False,
-                               multianimal=False)
-        
+        if not 'config.yaml' in configpath:
+            import deeplabcut as dlc
+            dlc.create_new_project(self.subject[0], self.experimenter, self.get_video_path(),
+                                   working_directory=configpath,
+                                   copy_videos=False,
+                                   multianimal=False)
+        print('Project already exists ? [{0}]'.format(configpath))
     def _extract_frames_gui(self):
         configpath = self.get_project_folder()
         if not os.path.exists(configpath):
