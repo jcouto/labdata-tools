@@ -178,7 +178,9 @@ The commands are:
                             ['.phy',
                              '.ipynb_checkpoints',
                              '._.DS_Store',
-                             '.DS_Store'], type=str, nargs='+')
+                             '.DS_Store',
+                             'dummy',
+                             'FakeSubject'], type=str, nargs='+')
         parser.add_argument('--overwrite', action='store_true',
                             default=False)
         parser.add_argument
@@ -268,9 +270,13 @@ The commands are:
 
         # todo: add stuff to select only some animals
         parser.add_argument('-s','--subject', action='store', default=None, type=str)
-        parser.add_argument('-e','--except', action='store', default=[], type=str,nargs='+')
-        parser.add_argument('-n','--no-checksum', action='store_false', default=True)
-        parser.add_argument('-w','--keep-recent-weeks', action='store', type = int, default=5)
+        parser.add_argument('-e','--except', action='store',
+                            default=['dummy','FakeSubject'], type=str,nargs='+')
+        parser.add_argument('-n','--no-checksum', action='store_false',
+                            help = 'skip the checksum', default=True)
+        parser.add_argument('-w','--keep-recent-weeks', action='store',
+                            type = int, default=5,
+                            help='Number of weeks to keep data for.')
         parser.add_argument('--dry-run', action='store_true', default=False)
         
         
