@@ -25,11 +25,10 @@ class AnalysisWfield(BaseAnalysisPlugin):
         self.name = 'wfield'
         self.datatypes = ['one_photon']
         if not datatypes == ['']:
-            self.input_folder = datatypes
+            self.input_folder = datatypes[0]
         else:
             self.input_folder = 'one_photon'
         self.output_folder = 'wfield'
-        self.camera = camera
         
     def parse_arguments(self,arguments = []):
         parser = argparse.ArgumentParser(
@@ -38,40 +37,38 @@ class AnalysisWfield(BaseAnalysisPlugin):
         
         parser.add_argument('--raw',
                             action='store_true', default=False,
-                            type=bool,
                             help = "Open the GUI to explore data or check landmarks")
         parser.add_argument('--open',
                             action='store_true', default=False,
-                            type=bool,
                             help = "Open the GUI to explore data or check landmarks")
         
         args = parser.parse_args(arguments[1:])
         self.gui_raw = args.raw
         self.gui_open = args.open
+        if args.open or args.raw:
+            self.has_gui = True
         
     def _run(self):
         folders = self.get_sessions_folders()
-        # find the camera folder
+        print(folders)
         for folder in folders:
             f = glob(pjoin(folder,self.input_folder))
             if len(f):
                 f = f[0]
-                fname = os.path.basename(f)
-                fname = fname.replace('.avi',self.output_extension)
-                fname = pjoin(folder,self.output_folder,fname)
-                param = ''
-                if os.path.exists(fname):
-                    param += ' -p {0}'.format(fname.replace('.h5','.json'))
-                cmd = 'mptracker-gui {0} -o {1}{2}'.format(f,fname,param)
-                print(cmd)
+                outfolder = pjoin(folder,self.output_folder)
+                if self.gui_raw:
+                    cmd = 'wfield open_raw {0}'.format(f)
+                elif self.gui_open:
+                    cmd = 'wfield open {0}'.format(outfolder)
+                else:
+                    cmd = 'wfield preprocess {0} -o {1}'.format(f,outfolder)
                 os.system(cmd)
-                if not os.path.exists(fname):
+                if not os.path.exists(outfolder):
                     self.upload = False
-        
         
     def validate_parameters(self):
         if len(self.subject)>1:
             raise(ValueError('Specify only one subject.'))
-        if not len(self.subject[0]) or not len(self.sessions):
+        if not len(self.subject[0]) or not len(self.session):
             raise(ValueError('Specify a subject and a session (-a <SUBJECT> -s <SESSION>).'))
 

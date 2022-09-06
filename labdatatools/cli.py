@@ -96,6 +96,8 @@ The commands are:
                 upload = args.no_upload)
         analysis.parse_arguments(analysisargs)
         analysis.validate_parameters()
+        if analysis.has_gui:
+            print('This command needs to be ran interactively, use "run" instead.')
         analysis.slurm(analysisargs,
                        conda_environment = None,
                        ncpuspertask = args.ncpus,

@@ -45,6 +45,7 @@ class BaseAnalysisPlugin(object):
         self.bwlimit = bwlimit # For upload
         self.input_folder = ''
         self.output_folder = 'analysis'
+        self.has_gui = False
         
     def get_sessions_folders(self):
         self.sessions_folders = []
@@ -90,6 +91,10 @@ class BaseAnalysisPlugin(object):
               memory=None,
               walltime=None,
               partition=None):
+        if self.has_gui:
+            print('Command requires the gui... skipping.')
+            return
+
         cmd = 'labdata run {0}'.format(self.name.lower())
         if not self.subject == ['']: 
             cmd += ' -a {0}'.format(' '.join(self.subject))
@@ -107,7 +112,6 @@ class BaseAnalysisPlugin(object):
             cmd += ' ' + ' '.join(analysisargs)    
         cmd = self.parse_slurm_cmd(cmd)
         from .slurm import submit_slurm_job
-        
         submit_slurm_job(jobname=self.name.lower(),
                          command=cmd,
                          ntasks=ntasks,
