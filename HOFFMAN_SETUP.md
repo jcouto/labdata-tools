@@ -7,7 +7,7 @@ All shared software can be found in
 ```
 /u/project/churchland/apps
 ```
-This is the shared project folder where all Churchland lab software lives. You should also find your personal project folder under `/u/project/churchland/`. This is seperate from your $HOME folder and has a larger capacity, so you may want to configure your labdatatools config file to put data there.
+This is the shared project folder where all Churchland lab software lives. You should also find your personal project folder under `/u/project/churchland/`. This is seperate from your `$HOME` folder and has a larger capacity, so you may want to configure your labdatatools config file to put data there.
 ## Dev setup
 
 
