@@ -50,3 +50,8 @@ To list the available commands: ``labdata --help``
 Clone the repository to a folder in your computer and do:
 
 ``python setup.py install`` or ``develop`` to if you plan modifying the code.
+
+#### Hoffman2 setup (Churchland Lab members)
+
+If you would like to use labdatatools on the UCLA cluster (Hoffman2), please see HOFFMAN_SETUP.md for instructions.
+
