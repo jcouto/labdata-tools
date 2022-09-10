@@ -79,7 +79,7 @@ The commands are:
             labdatacmd = ' '.join(['labdata'] + sys.argv[1:])
             subject = None
             session = None
-            if args.subject == ['']:
+            if not args.subject == ['']:
                 subject = args.subject[0]
             if not args.session == ['']:                
                 session = args.session[0]
