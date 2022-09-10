@@ -94,7 +94,7 @@ class BaseAnalysisPlugin(object):
         if self.has_gui:
             print('Command requires the gui... skipping.')
             return
-
+        
         cmd = 'labdata run {0}'.format(self.name.lower())
         if not self.subject == ['']: 
             cmd += ' -a {0}'.format(' '.join(self.subject))

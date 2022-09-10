@@ -1,6 +1,14 @@
 from .utils import *
+import subprocess as sub
 
 LABDATA_SLURM_FOLDER = pjoin(os.path.expanduser('~'),'labdatatools','slurm')
+
+def has_slurm():
+    proc = sub.Popen('sinfo', shell=True, stdout=sub.PIPE, stderr = sub.PIPE)
+    out,err = proc.communicate()
+    if len(err):
+        return False
+    return True
 
 def submit_slurm_job(jobname,
                      command,
@@ -60,7 +68,6 @@ echo JOB FINISHED `date`
         f.write(sjobfile)
     folder,fname = os.path.split(filename)
     submit_cmd = 'cd {0} && sbatch {2} {1}'.format(folder,fname,sbatch_append)
-    import subprocess as sub
     proc = sub.Popen(submit_cmd, shell=True, stdout=sub.PIPE)
     out,err = proc.communicate()
     
@@ -69,3 +76,52 @@ echo JOB FINISHED `date`
         return jobid
     else:
         return None
+
+
+def submit_remote_slurm_job(labdatacmd, subject = None, session = None):
+    if 'slurm' in labdata_preferences.keys():
+        try:
+            # required for ssh
+            import paramiko
+        except:
+            print('"pip install paramiko" to install remote submissions.')
+            sys.exit()
+            # this is the remote computer key
+        for required in ['remote','user']:
+            if not required in labdata_preferences['slurm'].keys():
+                print('There is no "{0}" key in the "slurm" preferences.'.format(required))
+                sys.exit()
+    remotehost = labdata_preferences['slurm']['remote']
+    remoteuser = labdata_preferences['slurm']['user']
+    remotepass = None
+    if 'password' in labdata_preferences['slurm'].keys():
+        remotepass = labdata_preferences['slurm']['password']
+    if remotepass is None:
+        try:
+            from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit
+            app = QApplication([])
+            text, ok = QInputDialog.getText(
+                None, "labdatatools SLURM remote password",
+                "Password for user {0} on {1}?".format(remoteuser,remotehost), 
+                QLineEdit.Password)
+            if ok:
+                remotepass = text
+        except:
+            # use the cli for the password
+            import getpass
+            remotepass = getpass.getpass(prompt="SLURM remote host password?")
+    # are data on google drive?
+    if not session is None and not subject is None:
+        print('Checking if upload is needed.')
+        from .rclone import rclone_upload_data
+        rclone_upload_data(subject=subject,
+                           session = session)
+    # submit to remote computer
+    client = paramiko.client.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(remotehost, username=remoteuser, password=remotepass)
+    _stdin, _stdout,_stderr = client.exec_command(labdatacmd)
+    print('\n\n[{0}] Running: {1} \n'.format(remotehost,labdatacmd))
+    print(_stdout.read().decode())
+    print(_stderr.read().decode())
+    client.close()

@@ -2,6 +2,7 @@ import argparse
 from .rclone import *
 from .analysis import load_plugins
 import sys
+from .slurm import has_slurm,submit_remote_slurm_job
 
 class CLI_parser(object):
     def __init__(self):
@@ -73,6 +74,17 @@ The commands are:
             os.system('squeue')
             return
         plugins = load_plugins()
+        if not has_slurm():
+            print('No SLURM cluster detected on the local computer.')
+            labdatacmd = ' '.join(['labdata'] + sys.argv[1:])
+            subject = None
+            session = None
+            if args.subject == ['']:
+                subject = args.subject[0]
+            if not args.session == ['']:                
+                session = args.session[0]
+            submit_remote_slurm_job(labdatacmd,subject=subject,session = session)
+            return
         if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
             print('Available analysis [{0}]'.format(
                 labdata_preferences['plugins_folder']))
