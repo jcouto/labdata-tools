@@ -98,12 +98,13 @@ The commands are:
         analysis.validate_parameters()
         if analysis.has_gui:
             print('This command needs to be ran interactively, use "run" instead.')
-        analysis.slurm(analysisargs,
-                       conda_environment = None,
-                       ncpuspertask = args.ncpus,
-                       memory=args.memory,
-                       walltime=None,
-                       partition=args.queue)
+        jobnumber = analysis.slurm(analysisargs,
+                                   conda_environment = None,
+                                   ncpuspertask = args.ncpus,
+                                   memory=args.memory,
+                                   walltime=None,
+                                   partition=args.queue)
+        print('[SLURM] Job submitted {0}'.format(jobnumber))
         
     def run(self):
         parser = argparse.ArgumentParser(

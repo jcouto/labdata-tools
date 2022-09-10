@@ -112,17 +112,17 @@ class BaseAnalysisPlugin(object):
             cmd += ' ' + ' '.join(analysisargs)    
         cmd = self.parse_slurm_cmd(cmd)
         from .slurm import submit_slurm_job
-        submit_slurm_job(jobname=self.name.lower(),
-                         command=cmd,
-                         ntasks=ntasks,
-                         ncpuspertask = ncpuspertask,
-                         memory=memory,
-                         walltime=walltime,
-                         partition=partition,
-                         conda_environment=conda_environment,
-                         module_environment=None,
-                         mail=None,
-                         sbatch_append='')
+        return submit_slurm_job(jobname=self.name.lower(),
+                                command=cmd,
+                                ntasks=ntasks,
+                                ncpuspertask = ncpuspertask,
+                                memory=memory,
+                                walltime=walltime,
+                                partition=partition,
+                                conda_environment=conda_environment,
+                                module_environment=None,
+                                mail=None,
+                                sbatch_append='')
         
     def parse_slurm_cmd(self, cmd):
         '''Use this to change the command from a subclass.'''
