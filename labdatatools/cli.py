@@ -258,8 +258,14 @@ The commands are:
         
         args = parser.parse_args(sys.argv[2:])
         for subject in args.subject:
-            for session in args.session:
-                for datatype in args.datatype:
+            if args.session==[''] and args.datatype!=['']: #handle case of empty sessions but datatype is specified
+                data = rclone_list_files(subject)
+            else:
+                data = None
+            for datatype in args.datatype:
+                if data is not None:
+                    args.session = data.session[data.datatype==datatype].unique().tolist() #slicing DataFrame to get sessiondates that contain desired datatype
+                for session in args.session:
                     rclone_get_data(subject = subject,
                                     session = session,
                                     datatype = datatype,
