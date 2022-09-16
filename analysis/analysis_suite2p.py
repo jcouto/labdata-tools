@@ -75,6 +75,7 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
         self.file_filter = args.file_filter
         self.open_result = args.open_result
         if self.open_result:
+            self.has_gui = True
             self.datatypes = [self.output_folder]
             self._run = self._open_gui
 

@@ -2,6 +2,7 @@ import argparse
 from .rclone import *
 from .analysis import load_plugins
 import sys
+from .slurm import has_slurm,submit_remote_slurm_job
 
 class CLI_parser(object):
     def __init__(self):
@@ -73,6 +74,17 @@ The commands are:
             os.system('squeue')
             return
         plugins = load_plugins()
+        if not has_slurm():
+            print('No SLURM cluster detected on the local computer.')
+            labdatacmd = ' '.join(['labdata'] + sys.argv[1:])
+            subject = None
+            session = None
+            if not args.subject == ['']:
+                subject = args.subject[0]
+            if not args.session == ['']:                
+                session = args.session[0]
+            submit_remote_slurm_job(labdatacmd,subject=subject,session = session)
+            return
         if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
             print('Available analysis [{0}]'.format(
                 labdata_preferences['plugins_folder']))
@@ -96,12 +108,15 @@ The commands are:
                 upload = args.no_upload)
         analysis.parse_arguments(analysisargs)
         analysis.validate_parameters()
-        analysis.slurm(analysisargs,
-                       conda_environment = None,
-                       ncpuspertask = args.ncpus,
-                       memory=args.memory,
-                       walltime=None,
-                       partition=args.queue)
+        if analysis.has_gui:
+            print('This command needs to be ran interactively, use "run" instead.')
+        jobnumber = analysis.slurm(analysisargs,
+                                   conda_environment = None,
+                                   ncpuspertask = args.ncpus,
+                                   memory=args.memory,
+                                   walltime=None,
+                                   partition=args.queue)
+        print('[SLURM] Job submitted {0}'.format(jobnumber))
         
     def run(self):
         parser = argparse.ArgumentParser(
@@ -178,7 +193,9 @@ The commands are:
                             ['.phy',
                              '.ipynb_checkpoints',
                              '._.DS_Store',
-                             '.DS_Store'], type=str, nargs='+')
+                             '.DS_Store',
+                             'dummy',
+                             'FakeSubject'], type=str, nargs='+')
         parser.add_argument('--overwrite', action='store_true',
                             default=False)
         parser.add_argument
@@ -254,8 +271,14 @@ The commands are:
         
         args = parser.parse_args(sys.argv[2:])
         for subject in args.subject:
-            for session in args.session:
-                for datatype in args.datatype:
+            if args.session==[''] and args.datatype!=['']: #handle case of empty sessions but datatype is specified
+                data = rclone_list_files(subject)
+            else:
+                data = None
+            for datatype in args.datatype:
+                if data is not None:
+                    args.session = data.session[data.datatype==datatype].unique().tolist() #slicing DataFrame to get sessiondates that contain desired datatype
+                for session in args.session:
                     rclone_get_data(subject = subject,
                                     session = session,
                                     datatype = datatype,
@@ -268,9 +291,13 @@ The commands are:
 
         # todo: add stuff to select only some animals
         parser.add_argument('-s','--subject', action='store', default=None, type=str)
-        parser.add_argument('-e','--except', action='store', default=[], type=str,nargs='+')
-        parser.add_argument('-n','--no-checksum', action='store_false', default=True)
-        parser.add_argument('-w','--keep-recent-weeks', action='store', type = int, default=5)
+        parser.add_argument('-e','--except', action='store',
+                            default=['dummy','FakeSubject'], type=str,nargs='+')
+        parser.add_argument('-n','--no-checksum', action='store_false',
+                            help = 'skip the checksum', default=True)
+        parser.add_argument('-w','--keep-recent-weeks', action='store',
+                            type = int, default=5,
+                            help='Number of weeks to keep data for.')
         parser.add_argument('--dry-run', action='store_true', default=False)
         
         

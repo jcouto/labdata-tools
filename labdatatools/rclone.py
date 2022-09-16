@@ -167,7 +167,7 @@ def rclone_upload_data(subject='',
                        datatype = None,
                        path_idx = 0,
                        bwlimit = None,
-                       excludes = ['.phy'],
+                       excludes = ['dummy','FakeSubject','.phy'],
                        overwrite = False):
     # this needs a pipe
     localpath = labdata_preferences['paths'][path_idx]
