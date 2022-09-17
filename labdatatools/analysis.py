@@ -1,5 +1,7 @@
 from .utils import *
 from .rclone import rclone_get_data,rclone_upload_data
+from .slurm import has_slurm, submit_slurm_job
+from .uge import has_uge, submit_uge_job
 
 def load_plugins():
     an = dict(files = glob(pjoin(
@@ -84,7 +86,7 @@ class BaseAnalysisPlugin(object):
         self._run()
         self.put_data()
 
-    def slurm(self, analysisargs,
+    def submit(self, analysisargs,
               conda_environment = None,
               ntasks=None,
               ncpuspertask = None,
@@ -94,7 +96,6 @@ class BaseAnalysisPlugin(object):
         if self.has_gui:
             print('Command requires the gui... skipping.')
             return
-        
         cmd = 'labdata run {0}'.format(self.name.lower())
         if not self.subject == ['']: 
             cmd += ' -a {0}'.format(' '.join(self.subject))
@@ -111,19 +112,31 @@ class BaseAnalysisPlugin(object):
         if len(analysisargs):
             cmd += ' ' + ' '.join(analysisargs)    
         cmd = self.parse_slurm_cmd(cmd)
-        from .slurm import submit_slurm_job
-        return submit_slurm_job(jobname=self.name.lower(),
-                                command=cmd,
-                                ntasks=ntasks,
-                                ncpuspertask = ncpuspertask,
-                                memory=memory,
-                                walltime=walltime,
-                                partition=partition,
-                                conda_environment=conda_environment,
-                                module_environment=None,
-                                mail=None,
-                                sbatch_append='')
-        
+        if has_slurm():
+            return submit_slurm_job(jobname=self.name.lower(),
+                                    command=cmd,
+                                    ntasks=ntasks,
+                                    ncpuspertask = ncpuspertask,
+                                    memory=memory,
+                                    walltime=walltime,
+                                    partition=partition,
+                                    conda_environment=conda_environment,
+                                    module_environment=None,
+                                    mail=None,
+                                    sbatch_append='')
+        elif has_uge():
+            return submit_uge_job(jobname=self.name.lower(),
+                                    command=cmd,
+                                    ntasks=ntasks,
+                                    ncpuspertask = ncpuspertask,
+                                    memory=memory,
+                                    walltime=walltime,
+                                    partition=partition,
+                                    conda_environment=conda_environment,
+                                    module_environment=None,
+                                    mail=None,
+                                    sbatch_append='')
+
     def parse_slurm_cmd(self, cmd):
         '''Use this to change the command from a subclass.'''
         return cmd
