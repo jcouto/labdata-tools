@@ -2,7 +2,9 @@ import argparse
 from .rclone import *
 from .analysis import load_plugins
 import sys
-from .slurm import has_slurm,submit_remote_slurm_job
+from .slurm import has_slurm
+from .uge import has_uge
+from .remote import submit_remote_job
 
 class CLI_parser(object):
     def __init__(self):
@@ -20,7 +22,7 @@ The commands are:
     clean_local                         deletes old files from the local computer
 
     run <ANALYSIS> -a <SUBJECT> -s <SESSION>     Runs an analysis script
-    slurm <ANALYSIS> -a <SUBJECT> -s <SESSION>   Submits an analysis script the queue
+    submit <ANALYSIS> -a <SUBJECT> -s <SESSION>   Submits an analysis script the queue (currently supports slurm or univa grid engine)
             
 ''')
         parser.add_argument('command', help= 'type: labdata <command> -h for help')
@@ -32,10 +34,10 @@ The commands are:
             exit(1)
         getattr(self,args.command)()
 
-    def slurm(self):
+    def submit(self):
         parser = argparse.ArgumentParser(
-            description = 'Process a dataset locally using slurm.',
-            usage = 'labdata slurm <ANALYSIS> -- <PARAMETERS>')
+            description = 'Process a dataset locally using slurm or univa grid engine.',
+            usage = 'labdata submit <ANALYSIS> -- <PARAMETERS>')
         
         parser.add_argument('analysis', action='store', default = '',
                             type=str,nargs = '?')
@@ -67,24 +69,34 @@ The commands are:
             sysargs = sys.argv[2:sys.argv.index('--')]
             analysisargs = sys.argv[sys.argv.index('--'):]
         args = parser.parse_args(sysargs)
-        if args.list_queues:
-            os.system('sinfo')
-            return
-        if args.list_jobs:
-            os.system('squeue')
-            return
         plugins = load_plugins()
-        if not has_slurm():
-            print('No SLURM cluster detected on the local computer.')
+        if has_slurm():
+            if args.list_queues:
+                os.system('sinfo')
+                return
+            if args.list_jobs:
+                os.system('squeue')
+                return
+        elif has_uge():
+            if args.list_queues:
+                os.system('qhost')
+                return
+            if args.list_jobs:
+                os.system('qstat -u echo $USER')
+                return
+        else:
+            print('No batch submission cluster detected on the local computer.')
             labdatacmd = ' '.join(['labdata'] + sys.argv[1:])
             subject = None
             session = None
             if not args.subject == ['']:
                 subject = args.subject[0]
-            if not args.session == ['']:                
+            if not args.session == ['']:
                 session = args.session[0]
-            submit_remote_slurm_job(labdatacmd,subject=subject,session = session)
+
+            submit_remote_job(labdatacmd,subject=subject,session = session)
             return
+
         if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
             print('Available analysis [{0}]'.format(
                 labdata_preferences['plugins_folder']))
@@ -93,10 +105,10 @@ The commands are:
                     print('\t'+p['name'])
             else:
                 print('''
-                Add plugins to the folder to start. 
+                Add plugins to the folder to start.
                 The repository has examples in the analysis folder.
-                ''')    
-            return 
+                ''')
+            return
         analysis = plugins[
             [p['name'] for p in plugins].index(args.analysis)]['object'](
                 subject = args.subject,
@@ -110,14 +122,14 @@ The commands are:
         analysis.validate_parameters()
         if analysis.has_gui:
             print('This command needs to be ran interactively, use "run" instead.')
-        jobnumber = analysis.slurm(analysisargs,
+        jobnumber = analysis.submit(analysisargs,
                                    conda_environment = None,
                                    ncpuspertask = args.ncpus,
                                    memory=args.memory,
                                    walltime=None,
                                    partition=args.queue)
-        print('[SLURM] Job submitted {0}'.format(jobnumber))
-        
+        print('Job submitted {0}'.format(jobnumber))
+
     def run(self):
         parser = argparse.ArgumentParser(
             description = 'Run an analysis on a dataset.',
@@ -156,10 +168,10 @@ The commands are:
                     print('\t'+p['name'])
             else:
                 print('''
-                Add plugins to the folder to start. 
+                Add plugins to the folder to start.
                 The repository has examples in the analysis folder.
                 ''')
-            return 
+            return
 
         analysis = plugins[
             [p['name'] for p in plugins].index(args.analysis)]['object'](

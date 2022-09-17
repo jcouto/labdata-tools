@@ -1,9 +1,18 @@
 from .utils import *
+import subprocess as sub
 
 LABDATA_UGE_FOLDER = pjoin(os.path.expanduser('~'),'labdatatools','uge')
 
 # TODO: implement distributed submission for jobs that can be run in a distributed memory fashion.
 # For now, we will default to shared memory submisison on one node.
+
+def has_uge():
+    proc = sub.Popen('qstat', shell=True, stdout=sub.PIPE, stderr = sub.PIPE)
+    out,err = proc.communicate()
+    if len(err):
+            return False
+    return True
+
 def submit_uge_job(jobname,
                    command,
                    ntasks=None,
@@ -41,6 +50,7 @@ def submit_uge_job(jobname,
         ugejobfile += ' h_rt={},'.format(walltime)
     if memory is not None:
         ugejobfile += ' h_data={}G,'.format(memory)
+        ugejobfile += ' h_vmem={}G,'.format(memory*ncpuspertask)
     if partition is not None:
         ugejobfile += ' {}'.format(partition)
     ugejobfile += ' \n'
@@ -71,7 +81,6 @@ def submit_uge_job(jobname,
         f.write(ugejobfile)
     folder,fname = os.path.split(filename)
     submit_cmd = 'cd {0} && qsub {2} {1}'.format(folder,fname,sbatch_append)
-    import subprocess as sub
     proc = sub.Popen(submit_cmd, shell=True, stdout=sub.PIPE)
     out,err = proc.communicate()
 
@@ -80,3 +89,6 @@ def submit_uge_job(jobname,
         return jobid
     else:
         return None
+
+def submit_remote_uge_job(labdatacmd,subject = None, session = None):
+    raise NotImplementedError('Function not built yet.')
