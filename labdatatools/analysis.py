@@ -92,7 +92,8 @@ class BaseAnalysisPlugin(object):
               ncpuspertask = None,
               memory=None,
               walltime=None,
-              partition=None):
+              partition=None,
+              module=None):
         if self.has_gui:
             print('Command requires the gui... skipping.')
             return
@@ -121,7 +122,7 @@ class BaseAnalysisPlugin(object):
                                     walltime=walltime,
                                     partition=partition,
                                     conda_environment=conda_environment,
-                                    module_environment=None,
+                                    module_environment=module,
                                     mail=None,
                                     sbatch_append='')
         elif has_uge():
@@ -133,7 +134,7 @@ class BaseAnalysisPlugin(object):
                                     walltime=walltime,
                                     partition=partition,
                                     conda_environment=conda_environment,
-                                    module_environment=None,
+                                    module_environment=module,
                                     mail=None,
                                     sbatch_append='')
 

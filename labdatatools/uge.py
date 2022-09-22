@@ -3,9 +3,6 @@ import subprocess as sub
 
 LABDATA_UGE_FOLDER = pjoin(os.path.expanduser('~'),'labdatatools','uge')
 
-# TODO: implement distributed submission for jobs that can be run in a distributed memory fashion.
-# For now, we will default to shared memory submisison on one node.
-
 def has_uge():
     proc = sub.Popen('qstat', shell=True, stdout=sub.PIPE, stderr = sub.PIPE)
     out,err = proc.communicate()
@@ -27,7 +24,7 @@ def submit_uge_job(jobname,
                    **kwargs):
 
     if ncpuspertask is None and ntasks is None:
-        ncpuspertask = 1 
+        ncpuspertask = 1
         ntasks = 1
     if ntasks is None:
         ntasks = 1
@@ -35,27 +32,34 @@ def submit_uge_job(jobname,
         ncpuspertask = 1
     if partition == 'gpu' and module_environment is None:
         raise Exception('If you would like to use a GPU node, you need to specify a CUDA module to activate.')
-    ugejobfile='''#!/bin/bash
-    #$ -cwd
-    # error = Merged with joblog
-    #$ -o {logfolder}/{jobname}_%j.stdout
-    #$ -j y
-    #$ -pe shared {ncpus}
-    '''.format(jobname = jobname,
-               logfolder = LABDATA_UGE_FOLDER,
-               ntasks = ntasks,
-               ncpus = ncpuspertask)
-    ugejobfile += '#$ -l'
+# TODO: Implement ntasks below
+    from datetime import datetime
+    rundate = "{:%Y_%m_%d_%H_%M_%S}".format(datetime.now())
+    ugejobfile = '''#!/bin/bash
+#$ -cwd
+# error = Merged with joblog
+#$ -o {logfolder}/{jobname}_{rundate}.stdout
+#$ -j y
+'''.format(jobname=jobname,
+           logfolder=LABDATA_UGE_FOLDER,
+           ntasks=ntasks,
+           ncpus=ncpuspertask,
+           rundate=rundate)
+    ugejobfile += '#$ -l '
     if walltime is not None:
-        ugejobfile += ' h_rt={},'.format(walltime)
+        ugejobfile += 'h_rt={},'.format(walltime)
     if memory is not None:
-        ugejobfile += ' h_data={}G,'.format(memory)
-        ugejobfile += ' h_vmem={}G,'.format(memory*ncpuspertask)
+        ugejobfile += 'h_data={}G,'.format(int(memory/ncpuspertask))
+        ugejobfile += 'h_vmem={}G,'.format(memory)
     if partition is not None:
-        ugejobfile += ' {}'.format(partition)
+        ugejobfile += '{}'.format(partition)
     ugejobfile += ' \n'
+    if ncpuspertask is not None:
+        ugejobfile += '#$ -pe shared {}\n'.format(ncpuspertask)
     if mail is not None:
         ugejobfile += '#$ -M {}\n#$ -m bea\n'.format(mail)
+    ugejobfile += '\n. /u/local/Modules/default/init/modules.sh'
+    ugejobfile += '\nsource $HOME/.bashrc'
     if module_environment is not None:
         ugejobfile += '\nmodule purge'
         ugejobfile += '\nmodule load {}\n'.format(module_environment)
@@ -65,7 +69,8 @@ def submit_uge_job(jobname,
     ugejobfile += '\necho "JOB {} started on:  " `hostname -s` \n'.format(jobname)
     ugejobfile += 'echo "JOB {} started on:  " `date ` \n'.format(jobname)
     ugejobfile += 'echo " " \n'
-
+    
+    ugejobfile += 'echo "{}"\n'.format(command)
     ugejobfile += '{}'.format(command)
 
     ugejobfile += '\necho "JOB {} ended on:  " `hostname -s` \n'.format(jobname)
@@ -74,8 +79,9 @@ def submit_uge_job(jobname,
 
     if not os.path.exists(LABDATA_UGE_FOLDER):
         os.makedirs(LABDATA_UGE_FOLDER)
-    nfiles = len(glob(pjoin(LABDATA_UGE_FOLDER,'*.stdout')))
+    nfiles = len(glob(pjoin(LABDATA_UGE_FOLDER,'*.sh')))
     filename = pjoin(LABDATA_UGE_FOLDER,'{jobname}_{nfiles}.sh'.format(jobname=jobname,nfiles=nfiles+1))
+    #filename = pjoin(LABDATA_UGE_FOLDER,'{jobname}_{rundate}.sh'.format(jobname=jobname,rundate=rundate))
 
     with open(filename,'w') as f:
         f.write(ugejobfile)
@@ -84,11 +90,18 @@ def submit_uge_job(jobname,
     proc = sub.Popen(submit_cmd, shell=True, stdout=sub.PIPE)
     out,err = proc.communicate()
 
-    if b'Submitted batch job' in out: #TODO: May need to modify this for UGE
-        jobid = int(re.findall("Submitted batch job ([0-9]+)",str(out))[0])
+
+    if b'Your job' in out:
+        jobid = int(re.findall("Your job ([0-9]+)",str(out))[0])
         return jobid
     else:
         return None
 
 def submit_remote_uge_job(labdatacmd,subject = None, session = None):
-    raise NotImplementedError('Function not built yet.')
+    raise NotImplementedError('Relocating to remote.py')
+
+    
+    
+    
+    
+    

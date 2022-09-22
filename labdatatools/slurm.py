@@ -79,6 +79,7 @@ echo JOB FINISHED `date`
 
 
 def submit_remote_slurm_job(labdatacmd, subject = None, session = None):
+    raise NotImplementedError('Relocating this function to remote.py')
     if 'slurm' in labdata_preferences.keys():
         try:
             # required for ssh

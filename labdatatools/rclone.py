@@ -138,13 +138,14 @@ Note:
     if verbose:
         print(cmd)
     process = Popen(cmd, shell=True, 
-                    stdout=PIPE, stderr=STDOUT,
+                    stdout=PIPE, stderr=PIPE,
                     universal_newlines = False)
     with tqdm(position=0, leave = True) as pbar:
         value = 0
         total = 1
         while True:
             nextline = process.stdout.readline()
+            print(nextline)
             nextline = nextline.decode()
             #print(nextline, end='',flush=True) # decode does not play nice with "\r"
             if 'Transferred:' in nextline and '%' in nextline:
@@ -196,7 +197,7 @@ def rclone_upload_data(subject='',
             command += ' --exclude {0}'.format(i)
     print(command)
     process = Popen(command, shell=True, 
-                    stdout=PIPE, stderr=STDOUT,
+                    stdout=PIPE, stderr=PIPE,
                     universal_newlines = False)
     while True:
         nextline = process.stdout.readline()
