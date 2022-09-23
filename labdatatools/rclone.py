@@ -145,7 +145,6 @@ Note:
         total = 1
         while True:
             nextline = process.stdout.readline()
-            print(nextline)
             nextline = nextline.decode()
             #print(nextline, end='',flush=True) # decode does not play nice with "\r"
             if 'Transferred:' in nextline and '%' in nextline:
