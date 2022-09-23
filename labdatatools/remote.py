@@ -1,5 +1,6 @@
+from .utils import *
+
 def submit_remote_job(labdatacmd, subject = None, session = None):
-    raise NotImplementedError('Need to merge submit_remote_slurm_job and submit_remote_uge_job')
     if 'remote_queue' in labdata_preferences.keys():
         try:
             import paramiko
@@ -13,3 +14,34 @@ def submit_remote_job(labdatacmd, subject = None, session = None):
     remotehost = labdata_preferenes['remote_queue']['remote']
     remoteuser = labdata_preferences['remote_queue']['user']
     remotepass = None
+    if 'password' in labdata_preferences['slurm'].keys():
+        remotepass = labdata_preferenes['slurm']['password']
+    if remotepass is None:
+        try:
+            from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit
+            app = QApplication([])
+            text, ok = QInputDialog.getText(
+                None, "labdatatools remote machine password",
+                "Password for user {0} on {1}".format(remoteuser,remotehost),
+                QLineEdit.Password)
+            if ok:
+                remotepass = text
+        except:
+            # use teh cli for the password
+            import getpass
+            remotepass = getpass.getpass(prompt="SLURM remote host password?")
+
+    if not session is None and not subject is None:
+        print('Checking if upload is needed.')
+        from .rclone import rclone_upload_data
+        rclone_upload_data(subject=subject,
+                           session = session)
+    # submit to remote computer
+    client = paramiko.client.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(remotehost, username=remoteuser, password=remotepass)
+    _stdin, _stdout,_stderr = client.exec_command(labdatacmd)
+    print('\n\n[{0}] Running: {1} \n'.format(remotehost,labdatacmd))
+    print(_stdout.read().decode())
+    print(_stderr.read().decode())
+    client.close()
