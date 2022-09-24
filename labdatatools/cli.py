@@ -64,7 +64,7 @@ The commands are:
         parser.add_argument('--list-jobs',action='store_true',default = False)
         parser.add_argument('--conda-env', action='store',default = None, type=str)
         parser.add_argument('--module', action='store',default = None, type=str)
-        
+        parser.add_argument('-t','--walltime', action='store',default = None, type=str)
         sysargs = sys.argv[2:]
         analysisargs = []
         if '--' in sys.argv:
@@ -128,7 +128,7 @@ The commands are:
                                    conda_environment = args.conda_env,
                                    ncpuspertask = args.ncpus,
                                    memory=args.memory,
-                                   walltime=None,
+                                   walltime=args.walltime,
                                    partition=args.queue,
                                    module=args.module)
         print('Job submitted {0}'.format(jobnumber))

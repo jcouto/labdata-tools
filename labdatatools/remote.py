@@ -1,21 +1,22 @@
 from .utils import *
+import sys
 
 def submit_remote_job(labdatacmd, subject = None, session = None):
     if 'remote_queue' in labdata_preferences.keys():
         try:
             import paramiko
         except:
-            print('"pip install paramike" to install remote submissions.')
+            print('"pip install paramiko" to install remote submissions.')
             sys.exit()
         for required in ['remote','user']:
-            if not required in labdata_preferences['slurm'].keys():
+            if not required in labdata_preferences['remote_queue'].keys():
                 print('There is no "{0}" key in the "remote_queue" preferences.'.format(required))
                 sys.exit()
-    remotehost = labdata_preferenes['remote_queue']['remote']
+    remotehost = labdata_preferences['remote_queue']['remote']
     remoteuser = labdata_preferences['remote_queue']['user']
     remotepass = None
-    if 'password' in labdata_preferences['slurm'].keys():
-        remotepass = labdata_preferenes['slurm']['password']
+    if 'password' in labdata_preferences['remote_queue'].keys():
+        remotepass = labdata_preferences['remote_queue']['password']
     if remotepass is None:
         try:
             from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit
@@ -29,7 +30,7 @@ def submit_remote_job(labdatacmd, subject = None, session = None):
         except:
             # use teh cli for the password
             import getpass
-            remotepass = getpass.getpass(prompt="SLURM remote host password?")
+            remotepass = getpass.getpass(prompt="Password for {}: ".format(remotehost))
 
     if not session is None and not subject is None:
         print('Checking if upload is needed.')
@@ -40,7 +41,8 @@ def submit_remote_job(labdatacmd, subject = None, session = None):
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(remotehost, username=remoteuser, password=remotepass)
-    _stdin, _stdout,_stderr = client.exec_command(labdatacmd)
+    # _stdin, _stdout,_stderr = client.exec_command(labdatacmd)
+    _stdin, _stdout,_stderr = client.exec_command('source ~/.bash_profile && {}'.format(labdatacmd))
     print('\n\n[{0}] Running: {1} \n'.format(remotehost,labdatacmd))
     print(_stdout.read().decode())
     print(_stderr.read().decode())
