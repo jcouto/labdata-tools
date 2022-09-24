@@ -90,18 +90,8 @@ def submit_uge_job(jobname,
     proc = sub.Popen(submit_cmd, shell=True, stdout=sub.PIPE)
     out,err = proc.communicate()
 
-
     if b'Your job' in out:
         jobid = int(re.findall("Your job ([0-9]+)",str(out))[0])
         return jobid
     else:
         return None
-
-def submit_remote_uge_job(labdatacmd,subject = None, session = None):
-    raise NotImplementedError('Relocating to remote.py')
-
-    
-    
-    
-    
-    
