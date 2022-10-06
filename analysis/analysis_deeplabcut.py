@@ -38,7 +38,7 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         self.video_extension = '.avi'
         self.data_extension = '.h5'
         self.video_filter = 'cam0'
-        self.experimenter = os.getlogin()
+        self.experimenter = None
 
     def parse_arguments(self,arguments = []):
         parser = argparse.ArgumentParser(
@@ -68,7 +68,7 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         parser.add_argument('--video-extension',
                             action='store', default='.avi', type=str, help = "specify video extension, default is .avi")
         parser.add_argument('--data-extension', action='store', default='.h5', type=str, help = "specify the data extension to be used, default is .h5")
-        parser.add_argument('--experimenter',default=os.getlogin(),type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
+        parser.add_argument('--experimenter',default=None,type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
         parser.add_argument('--extract-mode', action='store', default = 'manual', help = "specify if extraction ocurs manual (default) or automatic")
         parser.add_argument('--extract-algo', action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default)")
         parser.add_argument('--extract-nouser-feedback', action='store_false',
@@ -86,7 +86,8 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         self.video_extension = args.video_extension
         self.data_extension = args.data_extension
         self.experimenter = args.experimenter
-
+        if self.experimenter is None:
+            self.experimenter = os.getlogin()
         self.extractparams = dict(mode = args.extract_mode,
                                   algo = args.extract_algo,
                                   userfeedback = args.extract_nouser_feedback,
@@ -290,7 +291,7 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         dlc.analyze_videos(configpath, video_path,
                            videotype=self.video_extension,
                            shuffle=1,
-                           trainingsetindex=0,
+                           trainingsetindex=1,
                            save_as_csv=True,
                            destfolder=resfolder,
                            dynamic=(True, .5, 10))
@@ -309,6 +310,8 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         import numpy as np
         import pandas as pd
         import sys
+        from vispy import app as vapp
+        vapp.use_app()
         from vispy import plot as vp
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import (QApplication, QGridLayout, QGroupBox, QRadioButton, QVBoxLayout, QWidget, QSlider)
@@ -355,47 +358,68 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         dlc_coords_x, dlc_coords_y, dlc_coords_likelihood = dlc_coords.values.reshape((len(dlc_coords), -1, 3)).T
         bplist = bpts.unique().to_list()
         nbodyparts = len(bplist)
-        val = 0
+        val = [0]
 
         # allocate coordinates for all bodyparts for first frame
         x = []
         y = []
         for label in range(nbodyparts):
-            x.append(dlc_coords_x[label, int(val)])
-            y.append(dlc_coords_y[label, int(val)])
-
-        frame = mov[int(np.mod(val,len(mov)-1))].squeeze()
+            x.append(dlc_coords_x[label, int(val[0])])
+            y.append(dlc_coords_y[label, int(val[0])])
+        
+        frame = mov[int(np.mod(val[0],len(mov)-1))].squeeze()
 
         # make vispy widget
-        fig = vp.Fig(size=(800, 600), show=False,vsync=True)
+        fig = vp.Fig(size=(800, 600), show=True)
         plot = fig[0, 0]
         plot.bgcolor = "#efefef"
 
         # to update coordinates by frame
-        def set_data(val):
+        def set_data(v):
             x = []
             y = []
             for label in range(nbodyparts):
-                x.append(dlc_coords_x[label, int(val)])
-                y.append(dlc_coords_y[label, int(val)])
-            frame = mov[int(np.mod(val,len(mov)-1))].squeeze()
+                x.append(dlc_coords_x[label, int(v)])
+                y.append(dlc_coords_y[label, int(v)])
+            frame = mov[int(np.mod(v  ,len(mov)-1))].squeeze()
             pl.set_data(np.vstack([x,y]).T)
             im.set_data(frame)
-
+            plot.title.text = str(v)
         # plot and show data on vispy widget
         pl = plot.plot(data=np.vstack([x,y]).T,symbol='o',marker_size=3,width = 0,face_color='k',edge_color='k')
         im = plot.image(frame, cmap="gray")
+
         plot.camera.set_range((mov.shape[2],0), (mov.shape[3],0)) # flip upside down video
-
-
+        #cb = plot.colorbar(position="bottom",
+        #                   label="frame",
+        #                   clim=("0", str(len(mov))),
+        #                   cmap="gray",
+        #                   border_width=1,
+        #                   border_color="#aeaeae")
+        #print('Done.')
         # opens slider window
-        app = QApplication(sys.argv)
-        sliderwindow = DLCvideomaker()
-        sliderwindow.show()
+        #app = QApplication(sys.argv)
+        #sliderwindow = DLCvideomaker()
+        #sliderwindow.show()
+        #vapp.run(allow_interactive = True)
         #sliderwindow.grid.addWidget(fig.scene.canvas,0,1)
+        @fig.connect
+        def on_key_press(event, val = val):
+            if event.key == 'Left':
+                v = 1
+                if 'Shift' in event.modifiers:
+                    v = 1000
+                val[0] -= v
+                set_data(val[0])
+            elif event.key == 'Right':
+                v = 1
+                if 'Shift' in event.modifiers:
+                    v = 1000
+                val[0] += v
+                set_data(val[0])
         fig.show()
-
-        sys.exit(app.exec_())                           
+        vapp.run()
+        #sys.exit(app.exec_())                           
 
     def validate_parameters(self):
         if len(self.subject)>1:
