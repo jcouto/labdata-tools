@@ -44,13 +44,15 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         parser = argparse.ArgumentParser(
             description = '''
 Animal pose analysis.
-Actions are: create, extract, label, train, run, verify, outlier, refine, merge
+Actions are: create, extract, label, train, evaluate, run, verify, outlier, refine, merge
 ''',
-            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|extract|label|train|run|verify|outlier|refine|merge <PARAMETERS>')
+            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|extract|label|train|evaluate|run|verify|outlier|refine|merge <PARAMETERS>')
 
         parser.add_argument('action',
-                            action='store', type=str, help = "action to perform (CREATE project, EXTRACT frames, manual LABEL frames, TRAIN the network, RUN the analysis on a dataset, \
+                            action='store', type=str, help = "action to perform (CREATE project, EXTRACT frames, manual LABEL frames, TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset, \
                             VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+        parser.add_argument('--training-set',
+                            action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
         parser.add_argument('--label-subject',
                             action='store', default=None, type=str, help = "specity subject used for initial labeling (used when analyzing new videos)")
         parser.add_argument('--label-session',
@@ -58,9 +60,9 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         parser.add_argument('-c','--example-config',
                             action='store', default='headfixed_side', type=str)
         parser.add_argument('--start',
-                            action='store', default=0, type=float, help = "specify start frame for extracting outlier frames (not implemented yet)")
+                            action='store', default=0, type=float, help = "specify start frame for extracting outlier frames (not implemented yet/need to add edit config function)")
         parser.add_argument('--stop',
-                            action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames (not implemented yet)")
+                            action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames (not implemented yet/need to add edit config function)")
         parser.add_argument('-f','--video-filter',
                             action='store', default='cam0',
                             type=str,
@@ -81,6 +83,9 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         self.labeling_session = args.label_session
         self.labeling_subject = args.label_subject
         self.example_config = args.example_config
+        self.training_set = args.training_set
+        self.start = args.start
+        self.stop = args.stop
 
         self.video_filter = args.video_filter
         self.video_extension = args.video_extension
@@ -102,6 +107,8 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
             self._run = self._manual_annotation
         elif self.action == 'train':
             self._run = self._train_dlc
+        elif self.action == 'evaluate':
+            self._run = self._evaluate_dlc
         elif self.action == 'run':
             self._run = self._run_dlc
         elif self.action == 'verify':
@@ -113,7 +120,7 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         elif self.action == 'merge':
             self._run = self._merge_datasets
         else:
-            raise(ValueError('Available commands are: create, extract, label, run, train, verify, outlier, refine, and merge.'))
+            raise(ValueError('Available commands are: create, extract, label, evaluate, run, train, verify, outlier, refine, and merge.'))
 
     def get_analysis_folder(self):
         self.session_folders = self.get_sessions_folders()
@@ -246,7 +253,7 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
                                     augmenter_type='imgaug')
         dlc.train_network(configpath,
                           shuffle=1,
-                          trainingsetindex=0,
+                          trainingsetindex=self.training_set,
                           gputouse=None,
                           max_snapshots_to_keep=5,
                           autotune=False,
@@ -254,6 +261,15 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
                           saveiters=15000,
                           maxiters=300000,
                           allow_growth=True)
+
+    def _evaluate_dlc(self):
+        configpath = self.get_project_folder()
+        if not os.path.exists(configpath):
+            print('No project found, create it first.')
+        import deeplabcut as dlc
+        dlc.evaluate_network(configpath,
+                             trainingsetindex=self.training_set,
+                             plotting=True)
 
     def _extract_outliers(self):
         configpath = self.get_project_folder()
@@ -291,7 +307,7 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
         dlc.analyze_videos(configpath, video_path,
                            videotype=self.video_extension,
                            shuffle=1,
-                           trainingsetindex=1,
+                           trainingsetindex=self.training_set,
                            save_as_csv=True,
                            destfolder=resfolder,
                            dynamic=(True, .5, 10))
@@ -385,6 +401,7 @@ Actions are: create, extract, label, train, run, verify, outlier, refine, merge
             pl.set_data(np.vstack([x,y]).T)
             im.set_data(frame)
             plot.title.text = str(v)
+            
         # plot and show data on vispy widget
         pl = plot.plot(data=np.vstack([x,y]).T,symbol='o',marker_size=3,width = 0,face_color='k',edge_color='k')
         im = plot.image(frame, cmap="gray")
