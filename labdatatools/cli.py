@@ -88,6 +88,15 @@ The commands are:
                 return
         else:
             print('No batch submission cluster detected on the local computer.')
+            if args.list_queues:
+                print('\nListing queues from remote')
+                list_remote_queues()
+                return
+            if args.list_jobs:
+                print('\nListing current jobs from remote')
+                list_remote_jobs()
+                return
+            
             labdatacmd = ' '.join(['labdata'] + sys.argv[1:])
             subject = None
             session = None
