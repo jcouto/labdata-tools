@@ -59,9 +59,8 @@ def submit_uge_job(jobname,
     if mail is not None:
         ugejobfile += '#$ -M {}\n#$ -m bea\n'.format(mail)
     ugejobfile += '\n. /u/local/Modules/default/init/modules.sh'
-    ugejobfile += '\nsource $HOME/.bashrc'
+    ugejobfile += '\nsource $HOME/.bash_profile'
     if module_environment is not None:
-        ugejobfile += '\nmodule purge'
         ugejobfile += '\nmodule load {}\n'.format(module_environment)
     if conda_environment is not None:
         ugejobfile += 'conda activate {} \n'.format(conda_environment)
