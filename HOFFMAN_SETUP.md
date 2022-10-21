@@ -1,5 +1,6 @@
 # Hoffman2 setup
 Labdatatools can be run from any submission-based cluster with proper configuration. Currently supports job submission via slurm and univa grid engine (fork of sun grid engine). 
+
 ## Churchland Labmember Setup
 #### Getting Hoffman2 Access
 To get set up with Hoffman2 access, follow the documentation [here](https://www.hoffman2.idre.ucla.edu/Accounts/Requesting-an-account.html). The docs here have good general information on how to use the cluster, but it can be cumbersome. One of the goals of labdatatools is to abstract this away, making cluster submission more straightforward. Ask Max or Joao if you have any questions.
