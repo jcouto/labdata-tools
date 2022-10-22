@@ -44,7 +44,7 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
 
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
-        self.phi = args.phy
+        self.phy = args.phy
         
         
     def _run(self):
@@ -70,7 +70,7 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                         self.subject[0],
                         self.session[0],
                         os.path.basename(infolder)))
-                    if self.phi:
+                    if self.phy:
                         cmd = 'phy template-gui {0}'.format(outfolder,'params.py')
                     print(outfolder)
                     tmpfolder = pjoin(labdata_preferences['plugins_folder'],'kilosort2.5')
@@ -84,11 +84,11 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                     meta = read_spikeglx_meta(apinfile[0].replace('.bin','.meta'))
                     from scipy.io import savemat
                     chmapdict = dict(
-                        chanMap = meta['channel_idx'].astype('uint16').reshape([-1,1])+1,
-                        chanMap0ind = meta['channel_idx'].astype('uint16').reshape([-1,1])+1,
-                        xcoords = meta['coords'][:,0].reshape([-1,1]).astype('uint16'),
-                        ycoords = meta['coords'][:,1].reshape([-1,1]).astype('uint16'),
-                        connected = np.ones([len(meta['channel_idx']),1],dtype='uint8'),
+                        chanMap = (meta['channel_idx']+1).reshape([-1,1]).astype('float64'),
+                        chanMap0ind = meta['channel_idx'].reshape([-1,1]).astype('float64'),
+                        xcoords = meta['coords'][:,0].reshape([-1,1]).astype('float64'),
+                        ycoords = meta['coords'][:,1].reshape([-1,1]).astype('float64'),
+                        connected = np.ones([len(meta['channel_idx']),1],dtype='float64'),
                         name = apinfile[0])
                     if not os.path.exists(outfolder):
                         os.makedirs(outfolder)
