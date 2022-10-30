@@ -6,6 +6,13 @@ from .slurm import has_slurm
 from .uge import has_uge
 from .remote import submit_remote_job
 
+default_excludes = ['**.phy**',
+                    '**.ipynb_checkpoints**',
+                    '**._.DS_Store**',
+                    '**.DS_Store**',
+                    '**dummy**',
+                    '**FakeSubject**']
+
 class CLI_parser(object):
     def __init__(self):
         parser = argparse.ArgumentParser(
@@ -50,7 +57,7 @@ The commands are:
         parser.add_argument('-i','--includes',
                             action='store', default=[], type=str, nargs='+')
         parser.add_argument('-e','--excludes',
-                            action='store', default=[], type=str, nargs='+')
+                            action='store', default=default_excludes, type=str, nargs='+')
         parser.add_argument('--overwrite', action='store_true',
                             default=False)
         parser.add_argument('--no-upload', action='store_false',
@@ -157,7 +164,7 @@ The commands are:
         parser.add_argument('-i','--includes',
                             action='store', default=[], type=str, nargs='+')
         parser.add_argument('-e','--excludes',
-                            action='store', default=[], type=str, nargs='+')
+                            action='store', default=default_excludes, type=str, nargs='+')
         parser.add_argument('--overwrite', action='store_true',
                             default=False)
         parser.add_argument('--no-upload', action='store_false',
@@ -213,13 +220,8 @@ The commands are:
         parser.add_argument('-l','--bwlimit', action='store', default=None, type=int)
         parser.add_argument('--path-index', action='store',
                             default=0, type=int)
-        parser.add_argument('-e','--excludes', action='store', default=
-                            ['.phy',
-                             '.ipynb_checkpoints',
-                             '._.DS_Store',
-                             '.DS_Store',
-                             'dummy',
-                             'FakeSubject'], type=str, nargs='+')
+        parser.add_argument('-e','--excludes', action='store',
+                            default=default_excludes, type=str, nargs='+')
         parser.add_argument('--overwrite', action='store_true',
                             default=False)
         parser.add_argument

@@ -9,7 +9,7 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = [''],
+                 excludes = ['.phy'],
                  bwlimit = None,
                  overwrite = False,
                  **kwargs):
@@ -39,7 +39,7 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                             action='store', default=None, type = int,
                             help = "Probe number to sort or visualize")
         parser.add_argument('--phy',
-                            action='store', default=False,
+                            action='store_true', default=False,
                             help = "Open phy for manual curation")
 
         args = parser.parse_args(arguments[1:])
@@ -48,9 +48,7 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
         
         
     def _run(self):
-        folders = self.get_sessions_folders()
-        
-        print(folders)
+        folders = self.get_sessions_folders()        
         for folder in folders:
             f = glob(pjoin(folder,self.input_folder))
             if len(f):
@@ -71,7 +69,10 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                         self.session[0],
                         os.path.basename(infolder)))
                     if self.phy:
-                        cmd = 'phy template-gui {0}'.format(outfolder,'params.py')
+                        cmd = 'phy template-gui {0}'.format(pjoin(outfolder,'params.py'))
+                        os.system(cmd)
+                        if self.phy:
+                            break
                     print(outfolder)
                     tmpfolder = pjoin(labdata_preferences['plugins_folder'],'kilosort2.5')
                     if not os.path.exists(tmpfolder):
@@ -110,8 +111,6 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                     os.system(cmd.format(ksortfile))
                     if not os.path.exists(outfolder):
                         self.upload = False
-                    if self.phy:
-                        break
     def validate_parameters(self):
         if len(self.subject)>1:
             raise(ValueError('Specify only one subject.'))
