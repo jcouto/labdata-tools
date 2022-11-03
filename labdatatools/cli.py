@@ -4,7 +4,7 @@ from .analysis import load_plugins
 import sys
 from .slurm import has_slurm
 from .uge import has_uge
-from .remote import submit_remote_job
+from .remote import *
 
 class CLI_parser(object):
     def __init__(self):
