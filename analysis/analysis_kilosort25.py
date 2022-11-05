@@ -266,10 +266,12 @@ def parse_coords_from_spikeglx_metadata(meta,shanksep = 250):
     if not 'imDatPrb_type' in meta.keys():
         meta['imDatPrb_type'] = 0.0 # 3A/B probe
     probetype = int(meta['imDatPrb_type'])
+    shank_sep = 250
 
     imro = np.stack([[int(i) for i in m.split(' ')] for m in meta['imroTbl'][1:]])
     chans = imro[:,0]
     banks = imro[:,1]
+    shank = np.zeros(imro.shape[0])
     connected = np.stack([[int(i) for i in m.split(':')] for m in meta['snsShankMap'][1:]])[:,3]
     if (probetype <= 1) or (probetype == 1100) or (probetype == 1300):
         # <=1 3A/B probe
@@ -307,11 +309,27 @@ def parse_coords_from_spikeglx_metadata(meta,shanksep = 250):
             # staggered
             pos[0:-1:2,0] = 0          # odd sites
             pos[1:-1:2,0] = horz_sep   # even sites
-            pos[0:-1:2,1] = np.arange(nelec/2) * vert_sep 
+            pos[0:-1:2,1] = np.arange(nelec/2) * vert_sep
+    elif probetype == 24 or probetype == 21:
+        electrode_idx = imro[:,2]
+        if probetype == 24:
+            banks = imro[:,2]
+            shank = imro[:,1]
+            electrode_idx = imro[:,4]
+        nelec = 1280       # per shank; pattern repeats for the four shanks
+        vert_sep  = 15     # in um
+        horz_sep  = 32
+        pos = np.zeros((nelec, 2))
+        pos[0::2,0] = 0                              # x pos
+        pos[1::2,0] = horz_sep
+        pos[1::2,0] = pos[1::2,0] 
+        pos[0::2,1] = np.arange(nelec/2) * vert_sep   # y pos sites 0,2,4...
+        pos[1::2,1] = pos[0::2,1]                     # sites 1,3,5...
     else:
-        raise NotImplementedError('Implement 2.0')
-    coords = np.vstack([pos[electrode_idx,0],
-                        pos[electrode_idx,1]]).T
+        print('ERROR [parse_coords_from_spikeglx_metadata]: probetype {0} is not implemented.'.format(probetype))
+        raise NotImplementedError('Not implemented probetype {0}'.format(probetype))
+    coords = np.vstack([shank*shank_sep+pos[electrode_idx,0],
+                        pos[electrode_idx,1]]).T    
     idx = np.arange(len(coords))
     meta['coords'] = coords[connected==1,:]
     meta['channel_idx'] = idx[connected==1]

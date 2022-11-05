@@ -69,15 +69,17 @@ def list_files(subject = '', extension=''):
     return pd.DataFrame(files)
 
 
-def get_filepath(datapath,
-                 subject,
+def get_filepath(subject,
                  session,
                  subfolders,
+                 datapath = None,
                  filename = '*',
                  extension = '',
                  fetch = False,
                  **kwargs):
     '''Get a local filepath by extension'''
+    if datapath is None:
+        datapath = labdata_preferences['paths'][0]
     files = glob(pjoin(datapath,
                        subject,
                        session,

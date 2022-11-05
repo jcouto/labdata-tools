@@ -36,7 +36,7 @@ class AnalysisMptracker(BaseAnalysisPlugin):
             usage = 'mptracker -- <PARAMETERS>')
         
         parser.add_argument('--camera',
-                            action='store', default='cam0', type=str)
+                            action='store', default='*cam0', type=str)
 
         args = parser.parse_args(arguments[1:])
         
