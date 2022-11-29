@@ -110,6 +110,8 @@ class BaseAnalysisPlugin(object):
             cmd += ' -e {0}'.format(' '.join(self.excludes))
         if self.overwrite:
             cmd += ' --overwrite'
+        if not self.partial_run is None:
+            cmd += ' --partial {0}'.format(self.partial_run)
         if len(analysisargs):
             cmd += ' ' + ' '.join(analysisargs)    
         cmd = self.parse_slurm_cmd(cmd)

@@ -64,6 +64,8 @@ The commands are:
                             default=False)
         parser.add_argument('--no-upload', action='store_false',
                             default=True)
+        parser.add_argument('-p','--partial',
+                            action='store', default=None, type=str)
         parser.add_argument('-q','--queue',
                             action='store', default=None, type=str)
         parser.add_argument('-m','--memory',
@@ -137,7 +139,8 @@ The commands are:
                 includes = args.includes,
                 excludes = args.excludes,
                 overwrite = args.overwrite,
-                upload = args.no_upload)
+                upload = args.no_upload,
+                partial_run = args.partial)
         analysis.parse_arguments(analysisargs)
         analysis.validate_parameters()
         if analysis.has_gui:
@@ -171,7 +174,7 @@ The commands are:
                             default=False)
         parser.add_argument('--no-upload', action='store_false',
                             default=True)
-        parser.add_argument('--partial',
+        parser.add_argument('-p','--partial',
                             action='store', default=None, type=str)
 
         sysargs = sys.argv[2:]
