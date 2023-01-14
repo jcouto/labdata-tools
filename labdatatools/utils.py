@@ -22,6 +22,14 @@ default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                                       'labdatatools','analysis')}
 
 def list_subjects():
+    '''
+    List subjects in the data path. Takes no arguments.
+    Returns a pandas dataframe with the subject name and paths
+
+Example:
+    subjects = list_subjects()
+
+    '''
     subjects = []
     for path in labdata_preferences['paths']:
         tmp = glob(pjoin(path,'*'))
@@ -35,6 +43,18 @@ def list_subjects():
     return pd.DataFrame(subjects)
 
 def list_files(subject = '', extension=''):
+    '''
+    Lists the files for a subject.
+    Arguments:
+        subject (string)
+        extension (string)
+
+    Example:
+        files = list_files(extension = 'txt') # lists all text files
+        files = list_files(subject = 'JC044', extension = 'txt') # lists all text files for JC044
+
+    '''
+    
     paths = []
     for server in labdata_preferences['paths']:
         if len(subject):
@@ -77,7 +97,23 @@ def get_filepath(subject,
                  extension = '',
                  fetch = False,
                  **kwargs):
-    '''Get a local filepath by extension'''
+    '''
+    Get a local filepath; retrieve from the remote if not present.
+    Arguments:
+       subject (string; required)
+       session (string; required)
+       subfolders (list of strings - use multiple levels if needed; required)
+       datapath (the path of data; default is the first datapath in prefs)
+       filename (the key in the filename; default '*')
+       extension (default '')
+       fetch (get data from the server if not present; default False)
+
+    Example:
+       session_files = get_filepath(subject = 'JC086',
+                                    session = '20230113_131309',
+                                    subfolders = ['DropletsTask'])
+
+    '''
     if datapath is None:
         datapath = labdata_preferences['paths'][0]
     files = glob(pjoin(datapath,
