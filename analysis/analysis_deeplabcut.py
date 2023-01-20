@@ -481,9 +481,7 @@ def extract_outlier_frames(
     import numpy as np
     import pandas as pd
     from pathlib import Path
-    from deeplabcut.utils import (
-        auxiliaryfunctions,
-        auxfun_multianimal,
+    from deeplabcut.utils import auxiliaryfunctions, auxfun_multianimal
 
 
     cfg = auxiliaryfunctions.read_config(config)
