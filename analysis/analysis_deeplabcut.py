@@ -46,10 +46,10 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
 Animal pose analysis.
 Actions are: create, extract, label, train, evaluate, run, verify, outlier, refine, merge
 ''',
-            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|extract|label|train|evaluate|run|verify|outlier|refine|merge <PARAMETERS>')
+            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|extract|label|train|evaluate|run|verify|outlier|refine|merge <PARAMETERS>')
 
         parser.add_argument('action',
-                            action='store', type=str, help = "action to perform (CREATE project, EXTRACT frames, manual LABEL frames, TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset, \
+                            action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames, TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset, \
                             VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-set',
                             action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
@@ -101,6 +101,8 @@ Actions are: create, extract, label, train, evaluate, run, verify, outlier, refi
         print(self.action)
         if self.action == 'create':
             self._run = self._create_project
+        elif self.action == 'template':
+            self._run = self._use_config_template
         elif self.action == 'extract':
             self._run = self._extract_frames_gui
         elif self.action == 'label':
@@ -225,6 +227,23 @@ Actions are: create, extract, label, train, evaluate, run, verify, outlier, refi
                                    copy_videos=False,
                                    multianimal=False)
         print('Project already exists ? [{0}]'.format(configpath))
+
+    def _use_config_template(self):
+        configpath = self.get_project_folder()
+        if not os.path.exists(configpath):
+            print('No project found, create it first.')
+        import deeplabcut as dlc
+        if self.video_filter == 'cam0':
+            lateral_edits = {'colormap': 'summer', 'bodyparts': ['Nosetip', 'Whisker_1', 'Whisker_2', 'Whisker_3', 'Whisker_4',
+                'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':12}
+            dlc.auxiliaryfunctions.edit_config(config_path, lateral_edits)
+        elif self.video_filter == 'cam1':
+            bottom_edits = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
+            'Nose_BottomLeft', 'Nose_BottomRight', 'Whisker_L', 'Whisker_R', 'MouthEdge_L', 'MouthEdge_R', 'Paw_FrontLeft',
+            'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':12}
+            dlc.auxiliaryfunctions.edit_config(config_path, bottom_edits)
+        else:
+            print('Specify which camera to use (video_filter).')
 
     def _extract_frames_gui(self):
         configpath = self.get_project_folder()
@@ -382,7 +401,7 @@ Actions are: create, extract, label, train, evaluate, run, verify, outlier, refi
         for label in range(nbodyparts):
             x.append(dlc_coords_x[label, int(val[0])])
             y.append(dlc_coords_y[label, int(val[0])])
-        
+
         frame = mov[int(np.mod(val[0],len(mov)-1))].squeeze()
 
         # make vispy widget
@@ -401,7 +420,7 @@ Actions are: create, extract, label, train, evaluate, run, verify, outlier, refi
             pl.set_data(np.vstack([x,y]).T)
             im.set_data(frame)
             plot.title.text = str(v)
-            
+
         # plot and show data on vispy widget
         pl = plot.plot(data=np.vstack([x,y]).T,symbol='o',marker_size=3,width = 0,face_color='k',edge_color='k')
         im = plot.image(frame, cmap="gray")
@@ -436,7 +455,7 @@ Actions are: create, extract, label, train, evaluate, run, verify, outlier, refi
                 set_data(val[0])
         fig.show()
         vapp.run()
-        #sys.exit(app.exec_())                           
+        #sys.exit(app.exec_())
 
     def validate_parameters(self):
         if len(self.subject)>1:
