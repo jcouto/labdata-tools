@@ -452,176 +452,176 @@ Actions are: create, extract, label, train, evaluate, run, verify, outlier, refi
             raise(ValueError('No datatype specified.'))
 
 #Modified DLC auxiliaryfunctions
-def extract_outlier_frames(
-    config,
-    videos,
-    data_folder,
-    videotype="",
-    shuffle=1,
-    trainingsetindex=0,
-    outlieralgorithm="jump",
-    comparisonbodyparts="all",
-    epsilon=20,
-    p_bound=0.01,
-    ARdegree=3,
-    MAdegree=1,
-    alpha=0.01,
-    extractionalgorithm="kmeans",
-    automatic=False,
-    cluster_resizewidth=30,
-    cluster_color=False,
-    opencv=True,
-    savelabeled=False,
-    copy_videos=False,
-    destfolder=None,
-    modelprefix="",
-    track_method="",
-):
+    def extract_outlier_frames(
+        config,
+        videos,
+        data_folder,
+        videotype="",
+        shuffle=1,
+        trainingsetindex=0,
+        outlieralgorithm="jump",
+        comparisonbodyparts="all",
+        epsilon=20,
+        p_bound=0.01,
+        ARdegree=3,
+        MAdegree=1,
+        alpha=0.01,
+        extractionalgorithm="kmeans",
+        automatic=False,
+        cluster_resizewidth=30,
+        cluster_color=False,
+        opencv=True,
+        savelabeled=False,
+        copy_videos=False,
+        destfolder=None,
+        modelprefix="",
+        track_method="",
+    ):
 
-    import numpy as np
-    import pandas as pd
-    from pathlib import Path
-    from deeplabcut.utils import auxiliaryfunctions, auxfun_multianimal
+        import numpy as np
+        import pandas as pd
+        from pathlib import Path
+        from deeplabcut.utils import auxiliaryfunctions, auxfun_multianimal
 
 
-    cfg = auxiliaryfunctions.read_config(config)
-    bodyparts = auxiliaryfunctions.intersection_of_body_parts_and_ones_given_by_user(
-        cfg, comparisonbodyparts
-    )
-    if not len(bodyparts):
-        raise ValueError("No valid bodyparts were selected.")
+        cfg = auxiliaryfunctions.read_config(config)
+        bodyparts = auxiliaryfunctions.intersection_of_body_parts_and_ones_given_by_user(
+            cfg, comparisonbodyparts
+        )
+        if not len(bodyparts):
+            raise ValueError("No valid bodyparts were selected.")
 
-    track_method = auxfun_multianimal.get_track_method(cfg, track_method=track_method)
+        track_method = auxfun_multianimal.get_track_method(cfg, track_method=track_method)
 
-    DLCscorer, DLCscorerlegacy = auxiliaryfunctions.get_scorer_name(
-        cfg,
-        shuffle,
-        trainFraction=cfg["TrainingFraction"][trainingsetindex],
-        modelprefix=modelprefix,
-    )
+        DLCscorer, DLCscorerlegacy = auxiliaryfunctions.get_scorer_name(
+            cfg,
+            shuffle,
+            trainFraction=cfg["TrainingFraction"][trainingsetindex],
+            modelprefix=modelprefix,
+        )
 
-    Videos = auxiliaryfunctions.get_list_of_videos(videos, videotype)
-    if len(Videos) == 0:
-        print("No suitable videos found in", videos)
+        Videos = auxiliaryfunctions.get_list_of_videos(videos, videotype)
+        if len(Videos) == 0:
+            print("No suitable videos found in", videos)
 
-    for video in Videos:
-        if destfolder is None:
-            videofolder = str(Path(video).parents[0])
-        else:
-            videofolder = destfolder
-        vname = os.path.splitext(os.path.basename(video))[0]
+        for video in Videos:
+            if destfolder is None:
+                videofolder = str(Path(video).parents[0])
+            else:
+                videofolder = destfolder
+            vname = os.path.splitext(os.path.basename(video))[0]
 
-        try:
-            df, dataname, _, _ = auxiliaryfunctions.load_analyzed_data(
-                data_folder, vname, DLCscorer, track_method=track_method
-            )
-            nframes = len(df)
-            startindex = max([int(np.floor(nframes * cfg["start"])), 0])
-            stopindex = min([int(np.ceil(nframes * cfg["stop"])), nframes])
-            Index = np.arange(stopindex - startindex) + startindex
-
-            df = df.iloc[Index]
-            mask = df.columns.get_level_values("bodyparts").isin(bodyparts)
-            df_temp = df.loc[:, mask]
-            Indices = []
-            if outlieralgorithm == "uncertain":
-                p = df_temp.xs("likelihood", level="coords", axis=1)
-                ind = df_temp.index[(p < p_bound).any(axis=1)].tolist()
-                Indices.extend(ind)
-            elif outlieralgorithm == "jump":
-                temp_dt = df_temp.diff(axis=0) ** 2
-                temp_dt.drop("likelihood", axis=1, level="coords", inplace=True)
-                sum_ = temp_dt.sum(axis=1, level=1)
-                ind = df_temp.index[(sum_ > epsilon ** 2).any(axis=1)].tolist()
-                Indices.extend(ind)
-            elif outlieralgorithm == "fitting":
-                d, o = compute_deviations(
-                    df_temp, dataname, p_bound, alpha, ARdegree, MAdegree
+            try:
+                df, dataname, _, _ = auxiliaryfunctions.load_analyzed_data(
+                    data_folder, vname, DLCscorer, track_method=track_method
                 )
-                # Some heuristics for extracting frames based on distance:
-                ind = np.flatnonzero(
-                    d > epsilon
-                )  # time points with at least average difference of epsilon
-                if (
-                    len(ind) < cfg["numframes2pick"] * 2
-                    and len(d) > cfg["numframes2pick"] * 2
-                ):  # if too few points qualify, extract the most distant ones.
-                    ind = np.argsort(d)[::-1][: cfg["numframes2pick"] * 2]
-                Indices.extend(ind)
-            elif outlieralgorithm == "manual":
-                wd = Path(config).resolve().parents[0]
-                os.chdir(str(wd))
-                from deeplabcut.gui import outlier_frame_extraction_toolbox
+                nframes = len(df)
+                startindex = max([int(np.floor(nframes * cfg["start"])), 0])
+                stopindex = min([int(np.ceil(nframes * cfg["stop"])), nframes])
+                Index = np.arange(stopindex - startindex) + startindex
 
-                outlier_frame_extraction_toolbox.show(
-                    config,
-                    video,
-                    shuffle,
-                    df,
-                    savelabeled,
-                    cfg.get("multianimalproject", False),
-                )
-
-            # Run always except when the outlieralgorithm == manual.
-            if not outlieralgorithm == "manual":
-                Indices = np.sort(list(set(Indices)))  # remove repetitions.
-                print(
-                    "Method ",
-                    outlieralgorithm,
-                    " found ",
-                    len(Indices),
-                    " putative outlier frames.",
-                )
-                print(
-                    "Do you want to proceed with extracting ",
-                    cfg["numframes2pick"],
-                    " of those?",
-                )
-                if outlieralgorithm == "uncertain" or outlieralgorithm == "jump":
-                    print(
-                        "If this list is very large, perhaps consider changing the parameters "
-                        "(start, stop, p_bound, comparisonbodyparts) or use a different method."
-                    )
+                df = df.iloc[Index]
+                mask = df.columns.get_level_values("bodyparts").isin(bodyparts)
+                df_temp = df.loc[:, mask]
+                Indices = []
+                if outlieralgorithm == "uncertain":
+                    p = df_temp.xs("likelihood", level="coords", axis=1)
+                    ind = df_temp.index[(p < p_bound).any(axis=1)].tolist()
+                    Indices.extend(ind)
+                elif outlieralgorithm == "jump":
+                    temp_dt = df_temp.diff(axis=0) ** 2
+                    temp_dt.drop("likelihood", axis=1, level="coords", inplace=True)
+                    sum_ = temp_dt.sum(axis=1, level=1)
+                    ind = df_temp.index[(sum_ > epsilon ** 2).any(axis=1)].tolist()
+                    Indices.extend(ind)
                 elif outlieralgorithm == "fitting":
-                    print(
-                        "If this list is very large, perhaps consider changing the parameters "
-                        "(start, stop, epsilon, ARdegree, MAdegree, alpha, comparisonbodyparts) "
-                        "or use a different method."
+                    d, o = compute_deviations(
+                        df_temp, dataname, p_bound, alpha, ARdegree, MAdegree
                     )
+                    # Some heuristics for extracting frames based on distance:
+                    ind = np.flatnonzero(
+                        d > epsilon
+                    )  # time points with at least average difference of epsilon
+                    if (
+                        len(ind) < cfg["numframes2pick"] * 2
+                        and len(d) > cfg["numframes2pick"] * 2
+                    ):  # if too few points qualify, extract the most distant ones.
+                        ind = np.argsort(d)[::-1][: cfg["numframes2pick"] * 2]
+                    Indices.extend(ind)
+                elif outlieralgorithm == "manual":
+                    wd = Path(config).resolve().parents[0]
+                    os.chdir(str(wd))
+                    from deeplabcut.gui import outlier_frame_extraction_toolbox
 
-                if not automatic:
-                    askuser = input("yes/no")
-                else:
-                    askuser = "Ja"
-
-                if (
-                    askuser == "y"
-                    or askuser == "yes"
-                    or askuser == "Ja"
-                    or askuser == "ha"
-                ):  # multilanguage support :)
-                    # Now extract from those Indices!
-                    ExtractFramesbasedonPreselection(
-                        Indices,
-                        extractionalgorithm,
-                        df,
-                        video,
-                        cfg,
+                    outlier_frame_extraction_toolbox.show(
                         config,
-                        opencv,
-                        cluster_resizewidth,
-                        cluster_color,
+                        video,
+                        shuffle,
+                        df,
                         savelabeled,
-                        copy_videos=copy_videos,
+                        cfg.get("multianimalproject", False),
                     )
-                else:
+
+                # Run always except when the outlieralgorithm == manual.
+                if not outlieralgorithm == "manual":
+                    Indices = np.sort(list(set(Indices)))  # remove repetitions.
                     print(
-                        "Nothing extracted, please change the parameters and start again..."
+                        "Method ",
+                        outlieralgorithm,
+                        " found ",
+                        len(Indices),
+                        " putative outlier frames.",
                     )
-        except FileNotFoundError as e:
-            print(e)
-            print(
-                "It seems the video has not been analyzed yet, or the video is not found! "
-                "You can only refine the labels after the a video is analyzed. Please run 'analyze_video' first. "
-                "Or, please double check your video file path"
-            )
+                    print(
+                        "Do you want to proceed with extracting ",
+                        cfg["numframes2pick"],
+                        " of those?",
+                    )
+                    if outlieralgorithm == "uncertain" or outlieralgorithm == "jump":
+                        print(
+                            "If this list is very large, perhaps consider changing the parameters "
+                            "(start, stop, p_bound, comparisonbodyparts) or use a different method."
+                        )
+                    elif outlieralgorithm == "fitting":
+                        print(
+                            "If this list is very large, perhaps consider changing the parameters "
+                            "(start, stop, epsilon, ARdegree, MAdegree, alpha, comparisonbodyparts) "
+                            "or use a different method."
+                        )
+
+                    if not automatic:
+                        askuser = input("yes/no")
+                    else:
+                        askuser = "Ja"
+
+                    if (
+                        askuser == "y"
+                        or askuser == "yes"
+                        or askuser == "Ja"
+                        or askuser == "ha"
+                    ):  # multilanguage support :)
+                        # Now extract from those Indices!
+                        ExtractFramesbasedonPreselection(
+                            Indices,
+                            extractionalgorithm,
+                            df,
+                            video,
+                            cfg,
+                            config,
+                            opencv,
+                            cluster_resizewidth,
+                            cluster_color,
+                            savelabeled,
+                            copy_videos=copy_videos,
+                        )
+                    else:
+                        print(
+                            "Nothing extracted, please change the parameters and start again..."
+                        )
+            except FileNotFoundError as e:
+                print(e)
+                print(
+                    "It seems the video has not been analyzed yet, or the video is not found! "
+                    "You can only refine the labels after the a video is analyzed. Please run 'analyze_video' first. "
+                    "Or, please double check your video file path"
+                )
