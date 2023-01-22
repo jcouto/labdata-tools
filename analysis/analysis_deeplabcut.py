@@ -44,13 +44,14 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         parser = argparse.ArgumentParser(
             description = '''
 Animal pose analysis.
-Actions are: create, extract, label, train, evaluate, run, verify, outlier, refine, merge
+Actions are: create, template, extract, label, train, evaluate, run, verify, outlier, refine, merge
 ''',
             usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|extract|label|train|evaluate|run|verify|outlier|refine|merge <PARAMETERS>')
 
         parser.add_argument('action',
-                            action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames, TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset, \
-                            VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+                            action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames,\
+                            TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset, VERIFY model performance,\
+                            extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-set',
                             action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
         parser.add_argument('--label-subject',
@@ -234,14 +235,14 @@ Actions are: create, extract, label, train, evaluate, run, verify, outlier, refi
             print('No project found, create it first.')
         import deeplabcut as dlc
         if self.video_filter == 'cam0':
-            lateral_edits = {'colormap': 'summer', 'bodyparts': ['Nosetip', 'Whisker_1', 'Whisker_2', 'Whisker_3', 'Whisker_4',
-                'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':12}
-            dlc.auxiliaryfunctions.edit_config(configpath, lateral_edits)
+            lateral_template_GRB = {'colormap': 'summer', 'bodyparts': ['Nosetip', 'Whisker_1', 'Whisker_2', 'Whisker_3', 'Whisker_4',
+                'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.6}
+            dlc.auxiliaryfunctions.edit_config(configpath, lateral_template_GRB )
         elif self.video_filter == 'cam1':
-            bottom_edits = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
+            bottom_template_GRB = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
             'Nose_BottomLeft', 'Nose_BottomRight', 'Whisker_L', 'Whisker_R', 'MouthEdge_L', 'MouthEdge_R', 'Paw_FrontLeft',
-            'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':12}
-            dlc.auxiliaryfunctions.edit_config(configpath, bottom_edits)
+            'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':5 'start':0.5, 'stop':0.6}
+            dlc.auxiliaryfunctions.edit_config(configpath, bottom_template_GRB)
         else:
             print('Specify which camera to use (video_filter).')
 
