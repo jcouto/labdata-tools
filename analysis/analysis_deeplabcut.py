@@ -236,12 +236,12 @@ Actions are: create, extract, label, train, evaluate, run, verify, outlier, refi
         if self.video_filter == 'cam0':
             lateral_edits = {'colormap': 'summer', 'bodyparts': ['Nosetip', 'Whisker_1', 'Whisker_2', 'Whisker_3', 'Whisker_4',
                 'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':12}
-            dlc.auxiliaryfunctions.edit_config(config_path, lateral_edits)
+            dlc.auxiliaryfunctions.edit_config(configpath, lateral_edits)
         elif self.video_filter == 'cam1':
             bottom_edits = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
             'Nose_BottomLeft', 'Nose_BottomRight', 'Whisker_L', 'Whisker_R', 'MouthEdge_L', 'MouthEdge_R', 'Paw_FrontLeft',
             'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':12}
-            dlc.auxiliaryfunctions.edit_config(config_path, bottom_edits)
+            dlc.auxiliaryfunctions.edit_config(configpath, bottom_edits)
         else:
             print('Specify which camera to use (video_filter).')
 
