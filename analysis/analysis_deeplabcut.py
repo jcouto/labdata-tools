@@ -44,14 +44,14 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         parser = argparse.ArgumentParser(
             description = '''
 Animal pose analysis.
-Actions are: create, template, extract, label, train, evaluate, run, verify, outlier, refine, merge
+Actions are: create, template, extract, label, add, train, evaluate, run, verify, outlier, refine, merge
 ''',
-            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|extract|label|train|evaluate|run|verify|outlier|refine|merge <PARAMETERS>')
+            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|extract|add|label|train|evaluate|run|verify|outlier|refine|merge <PARAMETERS>')
 
         parser.add_argument('action',
                             action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames,\
-                            TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset, VERIFY model performance,\
-                            extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+                            ADD new videos for extracting, TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
+                             VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-set',
                             action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
         parser.add_argument('--label-subject',
@@ -81,6 +81,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
 
         args = parser.parse_args(arguments[1:])
 
+        self.session = args.label_session
         self.labeling_session = args.label_session
         self.labeling_subject = args.label_subject
         self.example_config = args.example_config
@@ -106,6 +107,8 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             self._run = self._use_config_template
         elif self.action == 'extract':
             self._run = self._extract_frames_gui
+        elif self.action == 'add':
+            self._run = self._add_new_video
         elif self.action == 'label':
             self._run = self._manual_annotation
         elif self.action == 'train':
@@ -241,7 +244,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         elif self.video_filter == 'cam1':
             bottom_template_GRB = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
             'Nose_BottomLeft', 'Nose_BottomRight', 'Whisker_L', 'Whisker_R', 'MouthEdge_L', 'MouthEdge_R', 'Paw_FrontLeft',
-            'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':5 'start':0.5, 'stop':0.6}
+            'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.6}
             dlc.auxiliaryfunctions.edit_config(configpath, bottom_template_GRB)
         else:
             print('Specify which camera to use (video_filter).')
@@ -262,6 +265,16 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         import deeplabcut as dlc
         dlc.label_frames(configpath)
         self.overwrite = True
+
+    def _add_new_video(self): #in process 1/22
+        configpath = self.get_project_folder()
+        if not os.path.exists(configpath):
+            print('No project found, create it first.')
+        # videos = self.get_video_dir()
+        # print(videos)
+        video = get_video_path()
+        print(video)
+        add_new_videos(configpath, video, copy_videos=False, coords=None, extract_frames=True) #modified DLC function defined locally
 
     def _train_dlc(self):
         configpath = self.get_project_folder()
@@ -297,8 +310,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             print('No project found, create it first.')
         video_dir = self.get_video_dir()
         data_folder = self.get_data_folder_path()
-        import deeplabcut as dlc
-        dlc.extract_outlier_frames(config = configpath, videos=video_dir, videotype = 'avi', data_folder = data_folder[0])
+        extract_outlier_frames(config = configpath, videos=video_dir, videotype = 'avi', data_folder = data_folder[0]) #should call local function now 1/22 -GRB
 
     def _refine_outliers(self):
         configpath = self.get_project_folder()
@@ -645,3 +657,124 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                     "You can only refine the labels after the a video is analyzed. Please run 'analyze_video' first. "
                     "Or, please double check your video file path"
                 )
+
+
+    def add_new_videos(
+        config, videos, copy_videos=False, coords=None, extract_frames=False
+    ):
+        """
+        Add new videos to the config file at any stage of the project.
+        Parameters
+        ----------
+        config : string
+            String containing the full path of the config file in the project.
+        videos : list
+            A list of strings containing the full paths of the videos to include in the project.
+        copy_videos : bool, optional
+            If this is set to True, the symlink of the videos are copied to the project/videos directory. The default is
+            ``False``; if provided it must be either ``True`` or ``False``.
+        coords: list, optional
+            A list containing the list of cropping coordinates of the video. The default is set to None.
+        extract_frames: bool, optional
+            if this is set to True extract_frames will be run on the new videos
+        Examples
+        --------
+        Video will be added, with cropping dimensions according to the frame dimensions of mouse5.avi
+        >>> deeplabcut.add_new_videos('/home/project/reaching-task-Tanmay-2018-08-23/config.yaml',['/data/videos/mouse5.avi'])
+        Video will be added, with cropping dimensions [0,100,0,200]
+        >>> deeplabcut.add_new_videos('/home/project/reaching-task-Tanmay-2018-08-23/config.yaml',['/data/videos/mouse5.avi'],copy_videos=False,coords=[[0,100,0,200]])
+        Two videos will be added, with cropping dimensions [0,100,0,200] and [0,100,0,250], respectively.
+        >>> deeplabcut.add_new_videos('/home/project/reaching-task-Tanmay-2018-08-23/config.yaml',['/data/videos/mouse5.avi','/data/videos/mouse6.avi'],copy_videos=False,coords=[[0,100,0,200],[0,100,0,250]])
+        """
+        import os
+        import shutil
+        from pathlib import Path
+
+        from deeplabcut.utils import auxiliaryfunctions
+        from deeplabcut.utils.auxfun_videos import VideoReader
+        from deeplabcut.generate_training_dataset import frame_extraction
+
+        # Read the config file
+        cfg = auxiliaryfunctions.read_config(config)
+
+        video_path = Path(config).parents[0] / "videos"
+        data_path = Path(config).parents[0] / "labeled-data"
+        videos = [Path(vp) for vp in videos]
+
+        dirs = [data_path / Path(i.stem) for i in videos]
+
+        for p in dirs:
+            """
+            Creates directory under data & perhaps copies videos (to /video)
+            """
+            p.mkdir(parents=True, exist_ok=True)
+
+        destinations = [video_path.joinpath(vp.name) for vp in videos]
+        if copy_videos:
+            for src, dst in zip(videos, destinations):
+                if dst.exists():
+                    pass
+                else:
+                    print("Copying the videos")
+                    shutil.copy(os.fspath(src), os.fspath(dst))
+
+        else:
+            # creates the symlinks of the video and puts it in the videos directory.
+            print("Attempting to create a symbolic link of the video ...")
+            for src, dst in zip(videos, destinations):
+                if dst.exists():
+                    print(f"Video {dst} already exists. Skipping...")
+                    continue
+                try:
+                    src = str(src)
+                    dst = str(dst)
+                    os.symlink(src, dst)
+                    print("Created the symlink of {} to {}".format(src, dst))
+                except OSError:
+                    try:
+                        import subprocess
+
+                        subprocess.check_call("mklink %s %s" % (dst, src), shell=True)
+                    except (OSError, subprocess.CalledProcessError):
+                        print(
+                            "Symlink creation impossible (exFat architecture?): "
+                            "cutting/pasting the video instead."
+                        )
+                        shutil.move(os.fspath(src), os.fspath(dst))
+                        print("{} moved to {}".format(src, dst))
+                videos = destinations
+
+        if copy_videos:
+            videos = destinations  # in this case the *new* location should be added to the config file
+        # adds the video list to the config.yaml file
+        for idx, video in enumerate(videos):
+            try:
+                # For windows os.path.realpath does not work and does not link to the real video.
+                video_path = str(Path.resolve(Path(video)))
+            #           video_path = os.path.realpath(video)
+            except:
+                video_path = os.readlink(video)
+
+            vid = VideoReader(video_path)
+            if coords is not None:
+                c = coords[idx]
+            else:
+                c = vid.get_bbox()
+            params = {video_path: {"crop": ", ".join(map(str, c))}}
+            if "video_sets_original" not in cfg:
+                cfg["video_sets"].update(params)
+            else:
+                cfg["video_sets_original"].update(params)
+        videos_str = [str(video) for video in videos]
+        if extract_frames:
+            frame_extraction.extract_frames(
+                config, mode='automatic', algo='kmeans', userfeedback=True, videos_list=videos_str
+            )
+            print(
+                "New videos were added to the project and frames have been extracted for labeling!"
+            )
+        else:
+            print(
+                "New videos were added to the project! Use the function 'extract_frames' to select frames for labeling."
+            )
+        auxiliaryfunctions.write_config(config, cfg)
