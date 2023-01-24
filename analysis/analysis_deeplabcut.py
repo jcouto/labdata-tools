@@ -81,7 +81,6 @@ Actions are: create, template, extract, label, add, train, evaluate, run, verify
 
         args = parser.parse_args(arguments[1:])
 
-        self.session = args.label_session
         self.labeling_session = args.label_session
         self.labeling_subject = args.label_subject
         self.example_config = args.example_config
@@ -239,7 +238,7 @@ Actions are: create, template, extract, label, add, train, evaluate, run, verify
         import deeplabcut as dlc
         if self.video_filter == 'cam0':
             lateral_template_GRB = {'colormap': 'summer', 'bodyparts': ['Nosetip', 'Whisker_1', 'Whisker_2', 'Whisker_3', 'Whisker_4',
-                'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.6}
+                'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.55}
             dlc.auxiliaryfunctions.edit_config(configpath, lateral_template_GRB )
         elif self.video_filter == 'cam1':
             bottom_template_GRB = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
@@ -253,10 +252,24 @@ Actions are: create, template, extract, label, add, train, evaluate, run, verify
         configpath = self.get_project_folder()
         if not os.path.exists(configpath):
             print('No project found, create it first.')
-        import deeplabcut as dlc
-        dlc.extract_frames(configpath,
+        if self.session is not self.labeling_session:
+            new_video = self.get_video_path()
+            from pathlib import Path
+            path = Path(new_video[0]) 
+            if path.is_file():
+                print('Video has already been added to the project. Proceeding with extraction.')
+                import deeplabcut as dlc
+                dlc.extract_frames(configpath, **self.extractparams)
+                self.overwrite = True
+            else:
+                print('Adding new video to project.')
+                import deeplabcut as dlc
+                dlc.add_new_videos(configpath, new_video, copy_videos=False, coords=None, extract_frames=True)
+        else:
+            import deeplabcut as dlc
+            dlc.extract_frames(configpath,
                            **self.extractparams)
-        self.overwrite = True
+            self.overwrite = True
 
     def _manual_annotation(self):
         configpath = self.get_project_folder()
@@ -478,6 +491,7 @@ Actions are: create, template, extract, label, add, train, evaluate, run, verify
         if self.session == ['']:
             raise(ValueError('No session specified.'))
         if len(self.session)>1:
+            print(self.session)
             self.is_multisession = True
             raise(OSError('Segmenting multiple sessions still has to be implemented.'))
         if self.datatypes == ['']:
