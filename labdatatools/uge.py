@@ -63,7 +63,7 @@ def submit_uge_job(jobname,
     if module_environment is not None:
         ugejobfile += '\nmodule load {}\n'.format(module_environment)
     if conda_environment is not None:
-        ugejobfile += 'conda activate {} \n'.format(conda_environment)
+        ugejobfile += '\nconda activate {} \n'.format(conda_environment)
 
     ugejobfile += '\necho "JOB {} started on:  " `hostname -s` \n'.format(jobname)
     ugejobfile += 'echo "JOB {} started on:  " `date ` \n'.format(jobname)

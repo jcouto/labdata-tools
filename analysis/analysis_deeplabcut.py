@@ -241,7 +241,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         elif self.video_filter == 'cam1':
             bottom_template_GRB = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
             'Nose_BottomLeft', 'Nose_BottomRight', 'Whisker_L', 'Whisker_R', 'MouthEdge_L', 'MouthEdge_R', 'Paw_FrontLeft',
-            'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':5 'start':0.5, 'stop':0.6}
+            'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.6}
             dlc.auxiliaryfunctions.edit_config(configpath, bottom_template_GRB)
         else:
             print('Specify which camera to use (video_filter).')
