@@ -53,7 +53,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
                              VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-set',
-                            action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
+                            action='store', default=-1, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
         parser.add_argument('--label-subject',
                             action='store', default=None, type=str, help = "specity subject used for initial labeling (used when analyzing new videos)")
         parser.add_argument('--label-session',
