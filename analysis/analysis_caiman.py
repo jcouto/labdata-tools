@@ -118,17 +118,18 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         import numpy as np
         
         c, dview, n_processes = cm.cluster.setup_cluster(backend='local',
-                                                 n_processes=2,  # number of process to use, if you go out of memory try to reduce this one, changed to 2-cores temporarily cause my pc is hot garbo
+                                                 n_processes=2,  # number of process to use, changed to 2-cores temporarily cause my pc is hot garbo
                                                  single_thread=False)
 
 
         #File Selection:
         session_folders = self.get_sessions_folders() #Go thorugh the folders
-        print(session_folders)
-        fnames= sorted(glob(os.path.join(session_folders[0], self.datatypes[0], 'binned_*.avi')))
-        #print(fnames)
+        #print(session_folders)
+        fnames = sorted(glob(os.path.join(session_folders[0], self.name, 'binned_*.avi')))
         
-        # Initial CNMF params
+
+        
+        # Initial CNMF params:
         opts = params.CNMFParams(params_dict={
             'fnames': fnames,
             'fr': self.fr,
@@ -165,7 +166,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #Display elapsed time
         print(f"Motion Correction Finished in: {round(mc_end_time - mc_start_time)} s.")
         
-        #Save the shifts  
+        #Save the Shift Data from Motion Correction:  
         rigid_shifts = np.array(mc.shifts_rig) # Retrieve shifts from mc object
         
         outputPath = os.path.join(session_folders[0], self.name) #Set path directory to same location as data
@@ -176,7 +177,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         np.save(outputPath + '/rigid_shifts', rigid_shifts) #Save the np array to npy file
          
 
-        #Load Memory Mappable File
+        #Load Memory Mappable File:
         Yr, dims, T = cm.load_memmap(fname_new, mode='r+')
         images = Yr.T.reshape((T,) + dims, order='F')
         
@@ -255,8 +256,10 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         
         cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, Ain=self.Ain, params=opts)
         cnm.fit(images)
+        cnm.estimates.detrend_df_f() #Detrend/De-Noising
+
         
-        #Display elapsed time
+        #Display elapsed time for CNMFE step
         cnmfe_end_time = time()
         print(f"Ran Initialization and Fit CNMFE Model in: {round(cnmfe_end_time - cnmfe_start_time)} s.")
         
