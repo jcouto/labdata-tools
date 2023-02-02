@@ -87,28 +87,30 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         parser = argparse.ArgumentParser(
                 description = '''
                     Identification of individual neurons in calium imaging data.
-                    Actions are: run, curate
+                    Actions are: motion correction, run cnmfe
                     ''',
-                usage = 'caiman -a <subject> -s <session> -- run|curate <PARAMETERS>') #To be adapted later
+                usage = 'caiman -a <subject> -s <session> -- motion_corection|run_cnmfe <PARAMETERS>')
 
-        #parser.add_argument('action',
-        #        action = 'store', type = str, help = "action to perform (RUN the analysis on a dataset, CURATE the extracted neurons)")
-                                #The 0th argument should always be the action that needs to be performed. This will also help strcturing the call
-                                #to the function and display the help hierarchically.
-        parser.add_argument('--round-num', #There is a convention to use a dash rather than an underscore.
-                action = 'store', default = 'second', type = str, help = "Specify the caiman extraction round.")
-
+        parser.add_argument('action',
+                            action='store', type=str, help = "input action to perform (MOTION_CORRECT runs the motion correction step; CNMFE runs the cnmfe fitting)")
         args = parser.parse_args(arguments[1:])
+        
+        self.action = args.action
+        print(self.action)
+        
+        if self.action == 'motion_correction':
+            self._run = self._run_motion_correction
+        elif self.action == 'run_cnmfe':
+            self._run = self._run_cnmfe
+        else:
+            raise(ValueError('Available command are: motion_correction, run_cnmfe.'))
 
-        self.round_num = args.round_num
-        #Argparse converts dashes to underscores in optional arguments (not in the positional one).
 
-    def _run(self):
+        
+    def _run_motion_correction(self):
         
         import caiman as cm
         from caiman.source_extraction import cnmf
-        from caiman.utils.utils import download_demo
-        from caiman.utils.visualization import inspect_correlation_pnr
         from caiman.motion_correction import MotionCorrect
         from caiman.source_extraction.cnmf import params as params
         
@@ -159,16 +161,17 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
     
         bord_px = 0 if self.border_nan == 'copy' else bord_px
-        fname_new = cm.save_memmap(fname_mc, base_name='memmap_', order='C',
-                                   border_to_0=bord_px)
+        cm.save_memmap(fname_mc, base_name='memmap_', order='C',
+                                   border_to_0=bord_px) #Saves the memory mappable file to the caiman folder
         
         mc_end_time = time()
-        #Display elapsed time
+        
+        #Display Elapsed Time:
         print(f"Motion Correction Finished in: {round(mc_end_time - mc_start_time)} s.")
         
         #Save the Shift Data from Motion Correction:  
         rigid_shifts = np.array(mc.shifts_rig) # Retrieve shifts from mc object
-        
+
         outputPath = os.path.join(session_folders[0], self.name) #Set path directory to same location as data
         
         if not os.path.exists(outputPath):
@@ -177,13 +180,48 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         np.save(outputPath + '/rigid_shifts', rigid_shifts) #Save the np array to npy file
          
 
-        #Load Memory Mappable File:
-        Yr, dims, T = cm.load_memmap(fname_new, mode='r+')
+    def _run_cnmfe(self):
+        import caiman as cm
+        from caiman.source_extraction import cnmf
+        from caiman.utils.visualization import inspect_correlation_pnr
+        from caiman.source_extraction.cnmf import params as params
+        
+        import os #For all the file path manipulations
+        from time import time # For time logging
+        import sys #To apppend the python path for the selection GUI
+        import numpy as np
+        
+        c, dview, n_processes = cm.cluster.setup_cluster(backend='local',
+                                                 n_processes=2,  # number of process to use, changed to 2-cores temporarily cause my pc is hot garbo
+                                                 single_thread=False)
+        
+        
+        #Load Memory Mappable File and Rigid Shifts File:
+        session_folders = self.get_sessions_folders() #Go thorugh the folders
+        #print(session_folders)
+        rigid_shifts = os.path.join(session_folders[0], self.name, 'rigid_shifts.npy' ) #Load rigid shifts file
+        memmap_file = glob(os.path.join(session_folders[0], self.name, 'memmap_*.mmap'))[0] #Load mmap file with order C.
+        #print(memmap_file)
+        
+        outputPath = os.path.join(session_folders[0], self.name) #Set output path directory to same location as data
+
+        
+        Yr, dims, T = cm.load_memmap(memmap_file, mode='r+')
         images = Yr.T.reshape((T,) + dims, order='F')
+
+#        if self.pw_rigid:
+#            bord_px = np.ceil(np.maximum(np.max(np.abs(mc.x_shifts_els)),
+#                                         np.max(np.abs(mc.y_shifts_els)))).astype(np.int)
+        
+        #Use the rigid shifts file to decide on pixels to exclude from border
+        if self.border_nan == 'copy':
+            bord_px = 0             
+        else: 
+            bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
         
         
-        
-        opts.change_params(params_dict={'dims': dims,
+        #Set up CNMFE Params:
+        opts = params.CNMFParams(params_dict={'dims': dims,
                                 'method_init': 'corr_pnr',  # use this for 1 photon
                                 'p': self.p,
                                 'K': self.K,
@@ -200,6 +238,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                                 'min_corr': self.min_corr,
                                 'min_pnr': self.min_pnr,
                                 'ssub_B': self.ssub_B,
+                                'pw_rigid': self.pw_rigid, #Added this because it's ncessary for bord_px parameter.
                                 'ring_size_factor': self.ring_size_factor,
                                 'method_deconvolution': 'oasis',       # could use 'cvxpy' alternatively
                                 'only_init': True,    # set it to True to run CNMF-E
@@ -224,7 +263,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #Compute spatiotemporal correlations on images:    
             
         corr_image_start = time()
-        cn_filter, pnr = cm.summary_images.correlation_pnr(images[::1], gSig=self.gSig[0], swap_dim=False)
+        cn_filter, pnr = cm.summary_images.correlation_pnr(images[::1], gSig=self.gSig[0], swap_dim=False) #Computes Peak-to-Noise Ratio
         #Compute the correlation and pnr image on every frame. This takes longer but will yield
         #The actual correlation image that can be used later to align other sessions to this session
         corr_image_end = time()
@@ -238,12 +277,12 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         # long time and consume a lot of memory. Consider changing images[::1] to
         # images[::5] or something similar to compute on a subset of the data
         
-        # inspect the summary images and set the parameters
-        inspect_correlation_pnr(cn_filter, pnr)
+        # Plot a summary image and set the parameters // Toggled this off to avoid the plotting window opening
+        #inspect_correlation_pnr(cn_filter, pnr)
         
-        # print parameters set above, modify them if necessary based on summary images
-        print(self.min_corr) # min correlation of peak (from correlation image)
-        print(self.min_pnr)  # min peak to noise ratio
+        # Print parameters set above, modify them if necessary based on summary images
+        #print(self.min_corr) # min correlation of peak (from correlation image)
+        #print(self.min_pnr)  # min peak to noise ratio
         
         # Shuts down parallel pool and restarts
         dview.terminate()
@@ -264,7 +303,9 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         print(f"Ran Initialization and Fit CNMFE Model in: {round(cnmfe_end_time - cnmfe_start_time)} s.")
         
         # Save first round of results
-        cnm.save(outputPath + '/firstRound.hdf5')  
+        cnm.save(outputPath + '/firstRound.hdf5')
+        print("CaImAn Analysis has been Completed.")
+        
 
  
     def validate_parameters(self):
