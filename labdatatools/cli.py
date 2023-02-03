@@ -317,8 +317,12 @@ The commands are:
                                     excludes = args.excludes)
     def clean_local(self):
         parser = argparse.ArgumentParser(
-            description = 'fetch data from the database',
-            usage = 'labdata clean_local --subject <SUBJECT> --no-checksum --keep-recent-weeks 5 --dry-run')
+            description = 'Clean data from the local disk (careful, this deletes data).',
+            usage = '''labdata clean_local --subject <SUBJECT> --no-checksum --keep-recent-weeks 5 --dry-run
+
+Examples:
+            Clean all data for all animals that have "JC" in the name:  labdata clean_local -s "JC*"
+''')
 
         # todo: add stuff to select only some animals
         parser.add_argument('-s','--subject', action='store', default=None, type=str)
