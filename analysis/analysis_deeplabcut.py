@@ -50,10 +50,10 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
 
         parser.add_argument('action',
                             action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames,\
-                            TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset, VERIFY model performance,\
-                            extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+                            TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
+                             VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-set',
-                            action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
+                            action='store', default=-1, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
         parser.add_argument('--label-subject',
                             action='store', default=None, type=str, help = "specity subject used for initial labeling (used when analyzing new videos)")
         parser.add_argument('--label-session',
@@ -99,13 +99,15 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                                   userfeedback = args.extract_nouser_feedback,
                                   crop = args.extract_crop)
         self.action = args.action
-        print(self.action)
+        
         if self.action == 'create':
             self._run = self._create_project
         elif self.action == 'template':
             self._run = self._use_config_template
         elif self.action == 'extract':
             self._run = self._extract_frames_gui
+        elif self.action == 'add':
+            self._run = self._add_new_video
         elif self.action == 'label':
             self._run = self._manual_annotation
         elif self.action == 'train':
@@ -164,7 +166,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                 folders = list(filter(os.path.isdir,folders))
                 folders = list(filter(lambda x: self.experimenter in x,folders))
             if len(folders):
-                config_path = pjoin(config_path,folders[0],'config.yaml')
+                config_path = pjoin(config_path,folders[0],'config.yaml') 
         return config_path
 
     def get_video_path(self):
@@ -236,7 +238,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         import deeplabcut as dlc
         if self.video_filter == 'cam0':
             lateral_template_GRB = {'colormap': 'summer', 'bodyparts': ['Nosetip', 'Whisker_1', 'Whisker_2', 'Whisker_3', 'Whisker_4',
-                'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.6}
+                'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.55}
             dlc.auxiliaryfunctions.edit_config(configpath, lateral_template_GRB )
         elif self.video_filter == 'cam1':
             bottom_template_GRB = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
@@ -246,14 +248,61 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         else:
             print('Specify which camera to use (video_filter).')
 
+    def get_project_videos_path(self):
+        self.session_folders = self.get_sessions_folders()
+        if self.labeling_session is None:
+            self.labeling_session = self.session[0]
+        if self.labeling_subject is None:
+            self.labeling_subject = self.subject[0]
+        session_key = dict(datapath = self.prefs['paths'][0],
+                           subject = self.labeling_subject,
+                           session = self.labeling_session)
+        config_path = pjoin(session_key['datapath'],
+                            session_key['subject'],
+                            session_key['session'],
+                            self.labeling_folder)
+        if os.path.exists(config_path):
+            # try to get it from the cloud.
+            if not self.partial_run in ['run', 'process']:
+                rclone_get_data(subject = self.labeling_subject,
+                                session = self.labeling_session,
+                                datatype = self.labeling_folder)
+        # search for files
+        if os.path.exists(config_path):
+            folders = glob(pjoin(config_path,'*'))
+            if len(folders):
+                folders = list(filter(os.path.isdir,folders))
+                folders = list(filter(lambda x: self.experimenter in x,folders))
+            if len(folders):
+                project_videos_path = pjoin(config_path,folders[0], 'videos') 
+        return project_videos_path    
+
     def _extract_frames_gui(self):
+        import os
+        from pathlib import Path
         configpath = self.get_project_folder()
         if not os.path.exists(configpath):
             print('No project found, create it first.')
         import deeplabcut as dlc
-        dlc.extract_frames(configpath,
+        if self.session is not self.labeling_session:
+            future_new_video = Path(self.get_video_path()[0])
+            head_tail = os.path.split(future_new_video)
+            project_videos_path = self.get_project_videos_path()
+            future_new_video_path = Path(pjoin(project_videos_path, head_tail[1])) #as in where the video will eventually end up
+            print(future_new_video_path)
+            if future_new_video_path.is_file():
+                print('Video has already been added to the project. Proceeding with extraction.')
+                dlc.extract_frames(configpath, **self.extractparams)
+                self.overwrite = True
+            else:
+                print('Video has not been added to the project.\
+                      Adding it to project now.')
+                new_video = self.get_video_path()
+                dlc.add_new_videos(configpath, new_video, copy_videos=False, coords=None, extract_frames=True)
+        else:
+            dlc.extract_frames(configpath,
                            **self.extractparams)
-        self.overwrite = True
+            self.overwrite = True
 
     def _manual_annotation(self):
         configpath = self.get_project_folder()
@@ -297,8 +346,186 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             print('No project found, create it first.')
         video_dir = self.get_video_dir()
         data_folder = self.get_data_folder_path()
-        import deeplabcut as dlc
-        dlc.extract_outlier_frames(config = configpath, videos=video_dir, videotype = 'avi', data_folder = data_folder[0])
+        def extract_outlier_frames(
+            config,
+            videos,
+            data_folder,
+            videotype="",
+            shuffle=1,
+            trainingsetindex=0,
+            outlieralgorithm="jump",
+            comparisonbodyparts="all",
+            epsilon=20,
+            p_bound=0.01,
+            ARdegree=3,
+            MAdegree=1,
+            alpha=0.01,
+            extractionalgorithm="kmeans",
+            automatic=False,
+            cluster_resizewidth=30,
+            cluster_color=False,
+            opencv=True,
+            savelabeled=False,
+            copy_videos=False,
+            destfolder=None,
+            modelprefix="",
+            track_method="",
+        ):
+
+            import numpy as np
+            import pandas as pd
+            from pathlib import Path
+            from deeplabcut.utils import auxiliaryfunctions, auxfun_multianimal
+            from deeplabcut.refine_training_dataset.outlier_frames import ExtractFramesbasedonPreselection
+
+
+            cfg = auxiliaryfunctions.read_config(config)
+            bodyparts = auxiliaryfunctions.intersection_of_body_parts_and_ones_given_by_user(
+                cfg, comparisonbodyparts
+            )
+            if not len(bodyparts):
+                raise ValueError("No valid bodyparts were selected.")
+
+            track_method = auxfun_multianimal.get_track_method(cfg, track_method=track_method)
+
+            DLCscorer, DLCscorerlegacy = auxiliaryfunctions.get_scorer_name(
+                cfg,
+                shuffle,
+                trainFraction=cfg["TrainingFraction"][trainingsetindex],
+                modelprefix=modelprefix,
+            )
+
+            Videos = auxiliaryfunctions.get_list_of_videos(videos, videotype)
+            if len(Videos) == 0:
+                print("No suitable videos found in", videos)
+
+            for video in Videos:
+                if destfolder is None:
+                    videofolder = str(Path(video).parents[0])
+                    videofolder = destfolder
+                
+                vname = os.path.splitext(os.path.basename(video))[0]
+
+                try:
+                    df, dataname, _, _ = auxiliaryfunctions.load_analyzed_data(
+                        data_folder, vname, DLCscorer, track_method=track_method
+                    )
+                    nframes = len(df)
+                    startindex = max([int(np.floor(nframes * cfg["start"])), 0])
+                    stopindex = min([int(np.ceil(nframes * cfg["stop"])), nframes])
+                    Index = np.arange(stopindex - startindex) + startindex
+
+                    df = df.iloc[Index]
+                    mask = df.columns.get_level_values("bodyparts").isin(bodyparts)
+                    df_temp = df.loc[:, mask]
+                    Indices = []
+                    if outlieralgorithm == "uncertain":
+                        p = df_temp.xs("likelihood", level="coords", axis=1)
+                        ind = df_temp.index[(p < p_bound).any(axis=1)].tolist()
+                        Indices.extend(ind)
+                    elif outlieralgorithm == "jump":
+                        temp_dt = df_temp.diff(axis=0) ** 2
+                        temp_dt.drop("likelihood", axis=1, level="coords", inplace=True)
+                        sum_ = temp_dt.sum(axis=1, level=1)
+                        ind = df_temp.index[(sum_ > epsilon ** 2).any(axis=1)].tolist()
+                        Indices.extend(ind)
+                    elif outlieralgorithm == "fitting":
+                        d, o = compute_deviations(
+                            df_temp, dataname, p_bound, alpha, ARdegree, MAdegree
+                        )
+                        # Some heuristics for extracting frames based on distance:
+                        ind = np.flatnonzero(
+                            d > epsilon
+                        )  # time points with at least average difference of epsilon
+                        if (
+                            len(ind) < cfg["numframes2pick"] * 2
+                            and len(d) > cfg["numframes2pick"] * 2
+                        ):  # if too few points qualify, extract the most distant ones.
+                            ind = np.argsort(d)[::-1][: cfg["numframes2pick"] * 2]
+                        Indices.extend(ind)
+                    elif outlieralgorithm == "manual":
+                        wd = Path(config).resolve().parents[0]
+                        os.chdir(str(wd))
+                        from deeplabcut.gui import outlier_frame_extraction_toolbox
+
+                        outlier_frame_extraction_toolbox.show(
+                            config,
+                            video,
+                            shuffle,
+                            df,
+                            savelabeled,
+                            cfg.get("multianimalproject", False),
+                        )
+
+                    # Run always except when the outlieralgorithm == manual.
+                    if not outlieralgorithm == "manual":
+                        Indices = np.sort(list(set(Indices)))  # remove repetitions.
+                        print(
+                            "Method ",
+                            outlieralgorithm,
+                            " found ",
+                            len(Indices),
+                            " putative outlier frames.",
+                        )
+                        print(
+                            "Do you want to proceed with extracting ",
+                            cfg["numframes2pick"],
+                            " of those?",
+                        )
+                        if outlieralgorithm == "uncertain" or outlieralgorithm == "jump":
+                            print(
+                                "If this list is very large, perhaps consider changing the parameters "
+                                "(start, stop, p_bound, comparisonbodyparts) or use a different method."
+                            )
+                        elif outlieralgorithm == "fitting":
+                            print(
+                                "If this list is very large, perhaps consider changing the parameters "
+                                "(start, stop, epsilon, ARdegree, MAdegree, alpha, comparisonbodyparts) "
+                                "or use a different method."
+                            )
+
+                        if not automatic:
+                            askuser = input("yes/no")
+                        else:
+                            askuser = "Ja"
+
+                        if (
+                            askuser == "y"
+                            or askuser == "yes"
+                            or askuser == "Ja"
+                            or askuser == "ha"
+                        ):  # multilanguage support :)
+                            # Now extract from those Indices!
+                            ExtractFramesbasedonPreselection(
+                                Indices,
+                                extractionalgorithm,
+                                df,
+                                video,
+                                cfg,
+                                config,
+                                opencv,
+                                cluster_resizewidth,
+                                cluster_color,
+                                savelabeled,
+                                copy_videos=copy_videos,
+                            ) #there is an error that pops up here mainly due to DLC's add.py function 
+                            #being called here. In the code it can be fixed by modifying the function and
+                            #switching "mklink" to "ln -s"
+                        else:
+                            print(
+                                "Nothing extracted, please change the parameters and start again..."
+                            )
+                except FileNotFoundError as e:
+                    print(e)
+                    print(
+                        "It seems the video has not been analyzed yet, or the video is not found! "
+                        "You can only refine the labels after the a video is analyzed. Please run 'analyze_video' first. "
+                        "Or, please double check your video file path"
+                    )
+    
+        extract_outlier_frames(config = configpath, videos=video_dir, videotype = 'avi', data_folder = data_folder[0]) #should call local function now 1/22 -GRB
+        #^this is popping up as not defined. maybe I need to define before this line?
+        #will investigate 1/25
 
     def _refine_outliers(self):
         configpath = self.get_project_folder()
@@ -330,7 +557,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                            trainingsetindex=self.training_set,
                            save_as_csv=True,
                            destfolder=resfolder,
-                           dynamic=(True, .5, 10))
+                           dynamic=(False, .5, 10)) #ask Joao why this was set to True 1/25
 
     def _verify_dlc(self):
         configpath = self.get_project_folder()
@@ -466,182 +693,10 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         if self.session == ['']:
             raise(ValueError('No session specified.'))
         if len(self.session)>1:
+            print(self.session)
             self.is_multisession = True
             raise(OSError('Segmenting multiple sessions still has to be implemented.'))
         if self.datatypes == ['']:
             raise(ValueError('No datatype specified.'))
 
 #Modified DLC auxiliaryfunctions
-    def extract_outlier_frames(
-        config,
-        videos,
-        data_folder,
-        videotype="",
-        shuffle=1,
-        trainingsetindex=0,
-        outlieralgorithm="jump",
-        comparisonbodyparts="all",
-        epsilon=20,
-        p_bound=0.01,
-        ARdegree=3,
-        MAdegree=1,
-        alpha=0.01,
-        extractionalgorithm="kmeans",
-        automatic=False,
-        cluster_resizewidth=30,
-        cluster_color=False,
-        opencv=True,
-        savelabeled=False,
-        copy_videos=False,
-        destfolder=None,
-        modelprefix="",
-        track_method="",
-    ):
-
-        import numpy as np
-        import pandas as pd
-        from pathlib import Path
-        from deeplabcut.utils import auxiliaryfunctions, auxfun_multianimal
-
-
-        cfg = auxiliaryfunctions.read_config(config)
-        bodyparts = auxiliaryfunctions.intersection_of_body_parts_and_ones_given_by_user(
-            cfg, comparisonbodyparts
-        )
-        if not len(bodyparts):
-            raise ValueError("No valid bodyparts were selected.")
-
-        track_method = auxfun_multianimal.get_track_method(cfg, track_method=track_method)
-
-        DLCscorer, DLCscorerlegacy = auxiliaryfunctions.get_scorer_name(
-            cfg,
-            shuffle,
-            trainFraction=cfg["TrainingFraction"][trainingsetindex],
-            modelprefix=modelprefix,
-        )
-
-        Videos = auxiliaryfunctions.get_list_of_videos(videos, videotype)
-        if len(Videos) == 0:
-            print("No suitable videos found in", videos)
-
-        for video in Videos:
-            if destfolder is None:
-                videofolder = str(Path(video).parents[0])
-            else:
-                videofolder = destfolder
-            vname = os.path.splitext(os.path.basename(video))[0]
-
-            try:
-                df, dataname, _, _ = auxiliaryfunctions.load_analyzed_data(
-                    data_folder, vname, DLCscorer, track_method=track_method
-                )
-                nframes = len(df)
-                startindex = max([int(np.floor(nframes * cfg["start"])), 0])
-                stopindex = min([int(np.ceil(nframes * cfg["stop"])), nframes])
-                Index = np.arange(stopindex - startindex) + startindex
-
-                df = df.iloc[Index]
-                mask = df.columns.get_level_values("bodyparts").isin(bodyparts)
-                df_temp = df.loc[:, mask]
-                Indices = []
-                if outlieralgorithm == "uncertain":
-                    p = df_temp.xs("likelihood", level="coords", axis=1)
-                    ind = df_temp.index[(p < p_bound).any(axis=1)].tolist()
-                    Indices.extend(ind)
-                elif outlieralgorithm == "jump":
-                    temp_dt = df_temp.diff(axis=0) ** 2
-                    temp_dt.drop("likelihood", axis=1, level="coords", inplace=True)
-                    sum_ = temp_dt.sum(axis=1, level=1)
-                    ind = df_temp.index[(sum_ > epsilon ** 2).any(axis=1)].tolist()
-                    Indices.extend(ind)
-                elif outlieralgorithm == "fitting":
-                    d, o = compute_deviations(
-                        df_temp, dataname, p_bound, alpha, ARdegree, MAdegree
-                    )
-                    # Some heuristics for extracting frames based on distance:
-                    ind = np.flatnonzero(
-                        d > epsilon
-                    )  # time points with at least average difference of epsilon
-                    if (
-                        len(ind) < cfg["numframes2pick"] * 2
-                        and len(d) > cfg["numframes2pick"] * 2
-                    ):  # if too few points qualify, extract the most distant ones.
-                        ind = np.argsort(d)[::-1][: cfg["numframes2pick"] * 2]
-                    Indices.extend(ind)
-                elif outlieralgorithm == "manual":
-                    wd = Path(config).resolve().parents[0]
-                    os.chdir(str(wd))
-                    from deeplabcut.gui import outlier_frame_extraction_toolbox
-
-                    outlier_frame_extraction_toolbox.show(
-                        config,
-                        video,
-                        shuffle,
-                        df,
-                        savelabeled,
-                        cfg.get("multianimalproject", False),
-                    )
-
-                # Run always except when the outlieralgorithm == manual.
-                if not outlieralgorithm == "manual":
-                    Indices = np.sort(list(set(Indices)))  # remove repetitions.
-                    print(
-                        "Method ",
-                        outlieralgorithm,
-                        " found ",
-                        len(Indices),
-                        " putative outlier frames.",
-                    )
-                    print(
-                        "Do you want to proceed with extracting ",
-                        cfg["numframes2pick"],
-                        " of those?",
-                    )
-                    if outlieralgorithm == "uncertain" or outlieralgorithm == "jump":
-                        print(
-                            "If this list is very large, perhaps consider changing the parameters "
-                            "(start, stop, p_bound, comparisonbodyparts) or use a different method."
-                        )
-                    elif outlieralgorithm == "fitting":
-                        print(
-                            "If this list is very large, perhaps consider changing the parameters "
-                            "(start, stop, epsilon, ARdegree, MAdegree, alpha, comparisonbodyparts) "
-                            "or use a different method."
-                        )
-
-                    if not automatic:
-                        askuser = input("yes/no")
-                    else:
-                        askuser = "Ja"
-
-                    if (
-                        askuser == "y"
-                        or askuser == "yes"
-                        or askuser == "Ja"
-                        or askuser == "ha"
-                    ):  # multilanguage support :)
-                        # Now extract from those Indices!
-                        ExtractFramesbasedonPreselection(
-                            Indices,
-                            extractionalgorithm,
-                            df,
-                            video,
-                            cfg,
-                            config,
-                            opencv,
-                            cluster_resizewidth,
-                            cluster_color,
-                            savelabeled,
-                            copy_videos=copy_videos,
-                        )
-                    else:
-                        print(
-                            "Nothing extracted, please change the parameters and start again..."
-                        )
-            except FileNotFoundError as e:
-                print(e)
-                print(
-                    "It seems the video has not been analyzed yet, or the video is not found! "
-                    "You can only refine the labels after the a video is analyzed. Please run 'analyze_video' first. "
-                    "Or, please double check your video file path"
-                )

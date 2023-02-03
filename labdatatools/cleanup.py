@@ -1,15 +1,29 @@
 from .utils import *
 from .rclone import rclone_list_files
 
-def clean_local_files(subject = None, checksum = True, dry_run = False, keep_recent_weeks = 5,
+def clean_local_files(subject = None,
+                      checksum = True,
+                      dry_run = False,
+                      keep_recent_weeks = 5,
                       exceptions = ['Session Settings','Session Data']):
     from tqdm import tqdm  # make this optional
     to_delete = []
     to_keep = []
     subjects = list_subjects()
     if not subject is None:
-        subjects = subjects[subjects.subject == subject]
+        if '*' in subject:
+            # then get all subjects that qualify
+            k = subject.replace('*','')
+            subjects = [s for i,s in subjects.iterrows() if k in s.subject]
+            if len(subjects):
+                subjects = pd.DataFrame(subjects)
+            else:
+                print("No local subject fit the key: {0}".format(subject))
+        else:
+            subjects = subjects[subjects.subject == subject]
+
     for i,s in subjects.iterrows():
+        print('Cleaning data for {0}'.format(s.subject))
         localfiles = list_files(s.subject)
         if not len(localfiles):
             continue
