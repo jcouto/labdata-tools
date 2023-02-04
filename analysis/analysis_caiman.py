@@ -98,13 +98,68 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         self.action = args.action
         print(self.action)
         
-        if self.action == 'motion_correction':
+        if self.action == 'downsample_videos':
+            self._run = self._run_downsampling
+        elif self.action == 'motion_correction':
             self._run = self._run_motion_correction
+        elif self.action == 'spatiotemporal_correlation':
+            self._run = self._run_spatiotemporal_correlation
         elif self.action == 'run_cnmfe':
             self._run = self._run_cnmfe
         else:
-            raise(ValueError('Available command are: motion_correction, run_cnmfe.'))
+            raise(ValueError('Available command are: downsample_videos, motion_correction, spatiotemporal_correlation, run_cnmfe.'))
 
+    def _run_downsampling(self): #UNDER CONSTRUCTION! Spatially downsample .avi file
+        from time import time # For time logging
+        import cv2
+        import numpy as np
+
+        #File Selection
+        session_folders = self.get_sessions_folders() #Go thorugh the folders
+        #print(session_folders)
+        fnames = sorted(glob(os.path.join(session_folders[0], self.datatypes[0], '*.avi')))
+        
+        outputPath = os.path.join(session_folders[0], self.name) #Set path directory to caiman folder
+        if not os.path.exists(outputPath):
+            os.mkdir(outputPath)
+        
+        scaling_factor = 0.5 #Shrink image size by factor 2
+        cropping_ROI = None #No cropping implemented so far
+        
+        preproc_t = time()
+        
+        
+        #Start the down-sampling
+
+        for vid in fnames:
+            cap = cv2.VideoCapture(vid)
+            frame_number = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) #Number of frames 
+            frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
+            frame_dims = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+            
+            new_dims = (int(frame_dims[0]*scaling_factor), int(frame_dims[1]*scaling_factor))
+            
+            output_file = os.path.join(outputPath, 'binned_' + os.path.splitext(os.path.split(vid)[1])[0] + '.avi')
+
+            fnames.append(output_file)
+            wrt = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*"mp4v"), frame_rate, new_dims)
+        
+            for k in range(frame_number):
+                success, f = cap.read()
+                if not success:
+                    print(f'Something_happend at frame {k}. Check the movie!')
+                frame = np.array(f[:,:,1],) #The video is gray-scale, convert to float to be able to record negative values
+                binned = cv2.resize(frame, new_dims, interpolation = cv2.INTER_AREA)
+                #Rescale the image and round to integer value
+                wrt.write(np.stack((binned, binned, binned), axis=2)) #Reassemble as rgb for saving      
+            cap.release()
+            wrt.release()
+            print(f'Processed: {vid}')
+        
+        preproc_dict = dict({'scaling_factor': scaling_factor, 'cropping_ROI': cropping_ROI})
+        np.save(os.path.join(outputPath, 'cropping_binning.npy'), preproc_dict)
+        print(f'Video binning done in {round(time() - preproc_t)} seconds')
+        print('------------------------------------------------')
 
         
     def _run_motion_correction(self):
@@ -178,9 +233,9 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             os.mkdir(outputPath)
         
         np.save(outputPath + '/rigid_shifts', rigid_shifts) #Save the np array to npy file
+        dview.terminate() #Terminate the processes
          
-
-    def _run_cnmfe(self):
+    def _run_spatiotemporal_correlation(self):
         import caiman as cm
         from caiman.source_extraction import cnmf
         from caiman.utils.visualization import inspect_correlation_pnr
@@ -281,14 +336,73 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #inspect_correlation_pnr(cn_filter, pnr)
         
         # Print parameters set above, modify them if necessary based on summary images
-        #print(self.min_corr) # min correlation of peak (from correlation image)
-        #print(self.min_pnr)  # min peak to noise ratio
+        print(f'The minimum peak correlation is: {self.min_corr}') # min correlation of peak (from correlation image)
+        print(f'The minimum peak to noise ratio is: {self.min_pnr}')  # min peak to noise ratio
         
         # Shuts down parallel pool and restarts
         dview.terminate()
+
+
+    def _run_cnmfe(self): #Seperate spatiotemporal correlation analysis and cnmfe
+        import caiman as cm
+        from caiman.source_extraction import cnmf
+        from caiman.utils.visualization import inspect_correlation_pnr
+        from caiman.source_extraction.cnmf import params as params
+        
+        import os #For all the file path manipulations
+        from time import time # For time logging
+        import sys #To apppend the python path for the selection GUI
+        import numpy as np
+        
+        
         c, dview, n_processes = cm.cluster.setup_cluster(backend='local',
                                                          n_processes=2,  # i have hot garbo computer
                                                          single_thread=False)
+        
+        session_folders = self.get_sessions_folders() #Go thorugh the folders
+        #print(session_folders)
+        rigid_shifts = os.path.join(session_folders[0], self.name, 'rigid_shifts.npy' ) #Load rigid shifts file
+        memmap_file = glob(os.path.join(session_folders[0], self.name, 'memmap_*.mmap'))[0] #Load mmap file with order C.                
+        outputPath = os.path.join(session_folders[0], self.name) #Set output path directory to same location as data
+
+        Yr, dims, T = cm.load_memmap(memmap_file, mode='r+')
+        images = Yr.T.reshape((T,) + dims, order='F')
+        
+        
+        if self.border_nan == 'copy':
+            bord_px = 0             
+        else: 
+            bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
+        
+        
+        #Set up CNMFE Params:
+        opts = params.CNMFParams(params_dict={'dims': dims,
+                                'method_init': 'corr_pnr',  # use this for 1 photon
+                                'p': self.p,
+                                'K': self.K,
+                                'gSig': self.gSig,
+                                'gSiz': self.gSiz,
+                                'merge_thr': self.merge_thr,
+                                'rf': self.rf,
+                                'stride': self.stride_cnmf,
+                                'tsub': self.tsub,
+                                'ssub': self.ssub,
+                                'low_rank_background': self.low_rank_background,
+                                'nb': self.gnb,
+                                'nb_patch': self.nb_patch,
+                                'min_corr': self.min_corr,
+                                'min_pnr': self.min_pnr,
+                                'ssub_B': self.ssub_B,
+                                'pw_rigid': self.pw_rigid, #Added this because it's ncessary for bord_px parameter.
+                                'ring_size_factor': self.ring_size_factor,
+                                'method_deconvolution': 'oasis',       # could use 'cvxpy' alternatively
+                                'only_init': True,    # set it to True to run CNMF-E
+                                'update_background_components': True,  # sometimes setting to False improve the results
+                                'normalize_init': False,               # just leave as is
+                                'center_psf': True,                    # leave as is for 1 photon
+                                'del_duplicates': True,                # whether to remove duplicates from initialization
+                                'border_pix': bord_px})                # number of pixels to not consider in the borders)
+
         
        # Run CNMF-E on Patches:
         cnmfe_start_time = time()
@@ -306,8 +420,9 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         cnm.save(outputPath + '/firstRound.hdf5')
         print("CaImAn Analysis has been Completed.")
         
-
- 
+        # Shuts down parallel pool and restarts
+        dview.terminate()
+        
     def validate_parameters(self):
         if len(self.subject)>1:
             raise(ValueError('Specify only one subject for CaImAn.'))
