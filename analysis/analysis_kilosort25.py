@@ -23,12 +23,12 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
             overwrite = overwrite,
             **kwargs)
         self.name = 'kilosort25'
+        self.output_folder = 'kilosort2.5'
         self.datatypes = ['ephys_*']
         if not datatypes == ['']:
             self.input_folder = datatypes[0]
         else:
             self.input_folder = 'ephys_*'
-        self.output_folder = 'kilosort2.5'
         
     def parse_arguments(self,arguments = []):
         parser = argparse.ArgumentParser(
@@ -45,6 +45,10 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
         self.phy = args.phy
+        if self.phy:
+            # then change the input folder
+            self.input_folder = [self.output_folder]
+            print(self.input_folder)
         
         
     def _run(self):
