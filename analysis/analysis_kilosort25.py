@@ -45,10 +45,6 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
         self.phy = args.phy
-        if self.phy:
-            # then change the input folder
-            self.input_folder = [self.output_folder]
-            print(self.input_folder)
         
         
     def _run(self):
@@ -174,7 +170,6 @@ fprintf('Looking for data inside %s ', outfolder)
 disp('');
 % main parameter changes from Kilosort2 to v2.5
 ops.sig        = 20;  % spatial smoothness constant for registration
-ops.fshigh     = 300; % high-pass more aggresively
 ops.nblocks    = 5; % blocks for registration. 0 turns it off, 1 does rigid registration. Replaces "datashift" option. 
 
 % is there a channel map file in this folder?
