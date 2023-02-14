@@ -7,58 +7,80 @@
 #
 # This will download the miniscope folder from the specified subject and session
 # and perform the caiman analysis with a decay_time of 0.6.
-
+from labdatatools.utils import *
 from labdatatools import BaseAnalysisPlugin
 import argparse
-from glob import glob
-from os.path import join as pjoin
-import os
-import sys #To apppend the python path for the selection GUI
+import json
 
+config_filename = 'caiman_default_params.json'
+
+defaults_caiman = dict(
+    motion_correction_params = dict(
+        fr = 30,                          # movie frame rate
+        decay_time = 0.6,  #length of a typical transient in seconds
+        pw_rigid = False, # flag for pw-rigid motion correction
+        gSig_filt = (3, 3), # size of filter, in general gSig (see below), change this one if algorithm does not work
+        max_shifts = (5, 5), # maximum allowed rigid shift
+        strides = (48, 48), # start a new patch for pw-rigid motion correction every x pixels
+        overlaps = (24, 24), # overlap between pathes (size of patch strides+overlap) maximum deviation allowed for patch with respect to rigid shifts
+        max_deviation_rigid = 3,
+        border_nan = 'copy', #Assignment of border pixel 
+        ),
+    cnmfe_params = dict(
+        method_init = 'corr_pnr',
+        p = 1,               # order of the autoregressive system
+        K = None,            # upper bound on number of components per patch, in general None for 1p data
+        gSig = (3, 3),       # gaussian width of a 2D gaussian kernel, which approximates a neuron
+        gSiz = (13, 13),     # average diameter of a neuron, in general 4*gSig+1
+        Ain = None,
+        merge_thr = 0.7,      # merging threshold, max correlation allowed
+        rf = 80,             # half-size of the patches in pixels. e.g., if rf=40, patches are 80x80
+        stride = 20,    # amount of overlap between the patches in pixels
+        tsub = 2,            # downsampling factor in time for initialization, increase if you have memory problems
+        ssub = 1,            # downsampling factor in space for initialization, increase if you have memory problems
+        low_rank_background = None,  # None leaves background of each patch intact,True performs global low-rank approximation if gnb>0
+        nb = 0,             # number of background components (rank) if positive,
+        nb_patch = 0,        # number of background components (rank) per patch if gnb>0,
+        min_corr = 0.7,       # min peak value from correlation image
+        min_pnr = 8,        # min peak to noise ration from PNR image
+        ssub_B = 2,          # additional downsampling factor in space for background
+        ring_size_factor = 1.4, # radius of ring is gSiz*ring_size_factor
+        only_init = True,    # set it to True to run CNMF-E
+        update_background_components = True,  # sometimes setting to False improve the results
+        normalize_init = False,               # just leave as is
+        center_psf = True,                    # leave as is for 1 photon
+        del_duplicates = True                # whether to remove duplicates from initialization
+        )
+    )  
+def caiman_save_params(params = defaults_caiman, fname = config_filename ):
+    if os.path.dirname(config_filename) == '':
+        caiman_prefpath = pjoin(labdata_preferences['plugins_folder'],'caiman',config_filename)
+    else:
+        caiman_prefpath = fname
+    if not os.path.exists(os.path.dirname(caiman_prefpath)):
+        os.makedirs(os.path.dirname(caiman_prefpath))    
+    with open(caiman_prefpath,'w') as fd:
+        json.dump(params,fd,indent=True)
+    
+
+def caiman_load_params(fname = config_filename):
+    if os.path.dirname(config_filename) == '':
+        caiman_prefpath = pjoin(labdata_preferences['plugins_folder'],'caiman',config_filename)
+    else:
+        caiman_prefpath = fname
+    if not os.path.exists(caiman_prefpath):
+        print('Parameters not found, creating one from defaults ({0}).'.format(caiman_prefpath))
+        caiman_save_params(fname = caiman_prefpath)
+    with open(caiman_prefpath,'r') as fd:
+        params = json.load(fd)
+    return params
 
 
 class AnalysisCaiman(BaseAnalysisPlugin):
-    ##############
-    fr = 30                          # movie frame rate
-    decay_time = 0.6  #length of a typical transient in seconds
-    pw_rigid = False # flag for pw-rigid motion correction
-    gSig_filt = (3, 3) # size of filter, in general gSig (see below), change this one if algorithm does not work
-    max_shifts = (5, 5) # maximum allowed rigid shift
-    strides = (48, 48) # start a new patch for pw-rigid motion correction every x pixels
-    overlaps = (24, 24) # overlap between pathes (size of patch strides+overlap) maximum deviation allowed for patch with respect to rigid shifts
-    max_deviation_rigid = 3
-    border_nan = 'copy' #Assignment of border pixels
     
-    
-    ##############
-    p = 1               # order of the autoregressive system
-    K = None            # upper bound on number of components per patch, in general None for 1p data
-    gSig = (3, 3)       # gaussian width of a 2D gaussian kernel, which approximates a neuron
-    gSiz = (13, 13)     # average diameter of a neuron, in general 4*gSig+1
-    Ain = None          # possibility to seed with predetermined binary masks
-    merge_thr = 0.7      # merging threshold, max correlation allowed
-    rf = 80             # half-size of the patches in pixels. e.g., if rf=40, patches are 80x80
-    stride_cnmf = 20    # amount of overlap between the patches in pixels
-    #                     (keep it at least large as gSiz, i.e 4 times the neuron size gSig)
-    tsub = 2            # downsampling factor in time for initialization,
-    #                     increase if you have memory problems
-    ssub = 1            # downsampling factor in space for initialization,
-    #                     increase if you have memory problems
-    #                     you can pass them here as boolean vectors
-    low_rank_background = None  # None leaves background of each patch intact,
-    #                     True performs global low-rank approximation if gnb>0
-    gnb = 0             # number of background components (rank) if positive,
-    #                     else exact ring model with following settings
-    #                         gnb= 0: Return background as b and W
-    #                         gnb=-1: Return full rank background B
-    #                         gnb<-1: Don't return background
-    nb_patch = 0        # number of background components (rank) per patch if gnb>0,
-    #                     else it is set automatically
-    min_corr = 0.7       # min peak value from correlation image
-    min_pnr = 8        # min peak to noise ration from PNR image
-    ssub_B = 2          # additional downsampling factor in space for background
-    ring_size_factor = 1.4  # radius of ring is gSiz*ring_size_factor
-         
+    Ain = None # possibility to seed with predetermined binary masks, if known, it is the initial estimate of spatial filters
+    stride_cnmf = 20 # amount of overlap between the patches in pixels
+    gnb = 0
     
     def __init__(self,subject,
                  session = None,
@@ -81,7 +103,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             overwrite = overwrite,
             **kwargs)
         self.name = 'caiman'
-
+        self.params =  None
+        
     def parse_arguments(self, arguments = []): #This is currently not implemented for local executions!
         '''Create parser object to be able to easily execute the analysis in the command line later.'''
         parser = argparse.ArgumentParser(
@@ -93,10 +116,14 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         parser.add_argument('action',
                             action='store', type=str, help = "input action to perform (MOTION_CORRECT runs the motion correction step; CNMFE runs the cnmfe fitting)")
+        parser.add_argument('-p','--params',
+                            action='store', type=str, help = "parameter file or path (default is "+config_filename +")",
+                            default = config_filename)
         args = parser.parse_args(arguments[1:])
         
         self.action = args.action
         print(self.action)
+        self.params = caiman_load_params(args.params)
         
         if self.action == 'downsample_videos':
             self._run = self._run_downsampling
@@ -110,6 +137,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             raise(ValueError('Available command are: downsample_videos, motion_correction, spatiotemporal_correlation, run_cnmfe.'))
 
     def _run_downsampling(self): #UNDER CONSTRUCTION! Spatially downsample .avi file
+        
         from time import time # For time logging
         import cv2
         import numpy as np
@@ -170,7 +198,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         from caiman.source_extraction.cnmf import params as params
         
         import os #For all the file path manipulations
-        from time import time # For time logging
+        from time import time # For timne logging
         import sys #To apppend the python path for the selection GUI
         import numpy as np
         
@@ -187,35 +215,24 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         
         # Initial CNMF params:
-        opts = params.CNMFParams(params_dict={
-            'fnames': fnames,
-            'fr': self.fr,
-            'decay_time': self.decay_time,
-            'pw_rigid': self.pw_rigid,
-            'max_shifts': self.max_shifts,
-            'gSig_filt': self.gSig_filt,
-            'strides': self.strides,
-            'overlaps': self.overlaps,
-            'max_deviation_rigid': self.max_deviation_rigid,
-            'border_nan': self.border_nan
-        })
-        
+        opts = params.CNMFParams(params_dict=self.params['motion_correction_params'])
+        opts.change_params(params_dict= {'fnames': fnames})
         mc_start_time = time()
     
         # Motion Correction Step:
         mc = MotionCorrect(fnames, dview=dview, **opts.get_group('motion'))
         mc.motion_correct(save_movie=True)
         
-        fname_mc = mc.fname_tot_els if self.pw_rigid else mc.fname_tot_rig
+        fname_mc = mc.fname_tot_els if opts.motion['pw_rigid'] else mc.fname_tot_rig
         
-        if self.pw_rigid:
+        if opts.motion['pw_rigid']:
             bord_px = np.ceil(np.maximum(np.max(np.abs(mc.x_shifts_els)),
                                          np.max(np.abs(mc.y_shifts_els)))).astype(np.int)
         else:
             bord_px = np.ceil(np.max(np.abs(mc.shifts_rig))).astype(np.int)
 
     
-        bord_px = 0 if self.border_nan == 'copy' else bord_px
+        bord_px = 0 if opts.motion['border_nan'] == 'copy' else bord_px
         cm.save_memmap(fname_mc, base_name='memmap_', order='C',
                                    border_to_0=bord_px) #Saves the memory mappable file to the caiman folder
         
@@ -250,6 +267,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                                                  n_processes=2,  # number of process to use, changed to 2-cores temporarily cause my pc is hot garbo
                                                  single_thread=False)
         
+        #Set up CNMFE Params:
+        opts = params.CNMFParams(params_dict=self.params['cnmfe_params'])
         
         #Load Memory Mappable File and Rigid Shifts File:
         session_folders = self.get_sessions_folders() #Go thorugh the folders
@@ -264,45 +283,15 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         Yr, dims, T = cm.load_memmap(memmap_file, mode='r+')
         images = Yr.T.reshape((T,) + dims, order='F')
 
-#        if self.pw_rigid:
+#        if opts.motion['pw_rigid']:
 #            bord_px = np.ceil(np.maximum(np.max(np.abs(mc.x_shifts_els)),
 #                                         np.max(np.abs(mc.y_shifts_els)))).astype(np.int)
         
         #Use the rigid shifts file to decide on pixels to exclude from border
-        if self.border_nan == 'copy':
+        if opts.motion['border_nan'] == 'copy':
             bord_px = 0             
         else: 
             bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
-        
-        
-        #Set up CNMFE Params:
-        opts = params.CNMFParams(params_dict={'dims': dims,
-                                'method_init': 'corr_pnr',  # use this for 1 photon
-                                'p': self.p,
-                                'K': self.K,
-                                'gSig': self.gSig,
-                                'gSiz': self.gSiz,
-                                'merge_thr': self.merge_thr,
-                                'rf': self.rf,
-                                'stride': self.stride_cnmf,
-                                'tsub': self.tsub,
-                                'ssub': self.ssub,
-                                'low_rank_background': self.low_rank_background,
-                                'nb': self.gnb,
-                                'nb_patch': self.nb_patch,
-                                'min_corr': self.min_corr,
-                                'min_pnr': self.min_pnr,
-                                'ssub_B': self.ssub_B,
-                                'pw_rigid': self.pw_rigid, #Added this because it's ncessary for bord_px parameter.
-                                'ring_size_factor': self.ring_size_factor,
-                                'method_deconvolution': 'oasis',       # could use 'cvxpy' alternatively
-                                'only_init': True,    # set it to True to run CNMF-E
-                                'update_background_components': True,  # sometimes setting to False improve the results
-                                'normalize_init': False,               # just leave as is
-                                'center_psf': True,                    # leave as is for 1 photon
-                                'del_duplicates': True,                # whether to remove duplicates from initialization
-                                'border_pix': bord_px})                # number of pixels to not consider in the borders)
-
         
         
         #Remove pixels with basically zero intensity but very few 
@@ -318,7 +307,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #Compute spatiotemporal correlations on images:    
             
         corr_image_start = time()
-        cn_filter, pnr = cm.summary_images.correlation_pnr(images[::1], gSig=self.gSig[0], swap_dim=False) #Computes Peak-to-Noise Ratio
+        cn_filter, pnr = cm.summary_images.correlation_pnr(images[::1], gSig=opts.init['gSig'][0], swap_dim=False) #Computes Peak-to-Noise Ratio
         #Compute the correlation and pnr image on every frame. This takes longer but will yield
         #The actual correlation image that can be used later to align other sessions to this session
         corr_image_end = time()
@@ -336,8 +325,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #inspect_correlation_pnr(cn_filter, pnr)
         
         # Print parameters set above, modify them if necessary based on summary images
-        print(f'The minimum peak correlation is: {self.min_corr}') # min correlation of peak (from correlation image)
-        print(f'The minimum peak to noise ratio is: {self.min_pnr}')  # min peak to noise ratio
+        #print(f'The minimum peak correlation is: {opts.init[min_corr]}') # min correlation of peak (from correlation image)
+        #print(f'The minimum peak to noise ratio is: {opts.init[min_pnr]}')  # min peak to noise ratio
         
         # Shuts down parallel pool and restarts
         dview.terminate()
@@ -348,18 +337,17 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         from caiman.source_extraction import cnmf
         from caiman.utils.visualization import inspect_correlation_pnr
         from caiman.source_extraction.cnmf import params as params
-        
-        import os #For all the file path manipulations
-        from time import time # For time logging
-        import sys #To apppend the python path for the selection GUI
         import numpy as np
         
+        from time import time # For time logging       
         
         c, dview, n_processes = cm.cluster.setup_cluster(backend='local',
                                                          n_processes=2,  # i have hot garbo computer
                                                          single_thread=False)
+        #Set up CNMFE Params:
+        opts = params.CNMFParams(params_dict=self.params['cnmfe_params'])
         
-        session_folders = self.get_sessions_folders() #Go thorugh the folders
+        session_folders = self.get_sessions_folders() #Go through the folders
         #print(session_folders)
         rigid_shifts = os.path.join(session_folders[0], self.name, 'rigid_shifts.npy' ) #Load rigid shifts file
         memmap_file = glob(os.path.join(session_folders[0], self.name, 'memmap_*.mmap'))[0] #Load mmap file with order C.                
@@ -368,46 +356,22 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         Yr, dims, T = cm.load_memmap(memmap_file, mode='r+')
         images = Yr.T.reshape((T,) + dims, order='F')
         
+        opts.change_params(params_dict = {'dims': dims})
         
-        if self.border_nan == 'copy':
+        
+        if opts.motion['border_nan'] == 'copy':
             bord_px = 0             
         else: 
             bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
         
-        
-        #Set up CNMFE Params:
-        opts = params.CNMFParams(params_dict={'dims': dims,
-                                'method_init': 'corr_pnr',  # use this for 1 photon
-                                'p': self.p,
-                                'K': self.K,
-                                'gSig': self.gSig,
-                                'gSiz': self.gSiz,
-                                'merge_thr': self.merge_thr,
-                                'rf': self.rf,
-                                'stride': self.stride_cnmf,
-                                'tsub': self.tsub,
-                                'ssub': self.ssub,
-                                'low_rank_background': self.low_rank_background,
-                                'nb': self.gnb,
-                                'nb_patch': self.nb_patch,
-                                'min_corr': self.min_corr,
-                                'min_pnr': self.min_pnr,
-                                'ssub_B': self.ssub_B,
-                                'pw_rigid': self.pw_rigid, #Added this because it's ncessary for bord_px parameter.
-                                'ring_size_factor': self.ring_size_factor,
-                                'method_deconvolution': 'oasis',       # could use 'cvxpy' alternatively
-                                'only_init': True,    # set it to True to run CNMF-E
-                                'update_background_components': True,  # sometimes setting to False improve the results
-                                'normalize_init': False,               # just leave as is
-                                'center_psf': True,                    # leave as is for 1 photon
-                                'del_duplicates': True,                # whether to remove duplicates from initialization
-                                'border_pix': bord_px})                # number of pixels to not consider in the borders)
-
+    
         
        # Run CNMF-E on Patches:
         cnmfe_start_time = time()
         
-        cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, Ain=self.Ain, params=opts)
+        cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, Ain = None, params=opts)
+#        import ipdb
+#        ipdb.set_trace()
         cnm.fit(images)
         cnm.estimates.detrend_df_f() #Detrend/De-Noising
 
