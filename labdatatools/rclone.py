@@ -42,10 +42,10 @@ def rclone_list_files(subject = '', filters = [],
         **labdata_preferences['rclone'])
     if len(includes):
         for i in includes:
-            cmd += " --include '{0}'".format(i)
+            cmd += ' --include "{0}"'.format(i)
     if len(excludes):
         for i in excludes:
-            cmd += " --exclude '{0}'".format(i)
+            cmd += ' --exclude "{0}"'.format(i)
 
     #print(cmd,flush=True)
     out = check_output(cmd.split(' ')).decode("utf-8")
@@ -138,10 +138,10 @@ Note:
         **keys)
     if len(includes):
         for i in includes:
-            cmd += " --include '{0}'".format(i)
+            cmd += ' --include "{0}"'.format(i)
     if len(excludes):
         for i in excludes:
-            cmd += " --exclude '{0}'".format(i)
+            cmd += ' --exclude "{0}"'.format(i)
     if not overwrite:
         cmd += ' --ignore-existing'
     if verbose:
@@ -202,7 +202,7 @@ def rclone_upload_data(subject='',
         command += ' --ignore-existing'
     if len(excludes):
         for i in excludes:
-            command += " --exclude '{0}'".format(i)
+            command += ' --exclude "{0}"'.format(i)
     print(command)
     process = Popen(command, shell=True, 
                     stdout=PIPE, stderr=PIPE,

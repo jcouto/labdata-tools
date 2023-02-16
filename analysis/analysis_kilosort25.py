@@ -46,7 +46,6 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
         self.probe = args.probe
         self.phy = args.phy
         
-        
     def _run(self):
         folders = self.get_sessions_folders()        
         for folder in folders:
@@ -69,6 +68,11 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                         self.session[0],
                         os.path.basename(infolder)))
                     if self.phy:
+                        # try to get the kilosort files
+                        from labdatatools.rclone import rclone_get_data
+                        rclone_get_data(subject = self.subject[0],
+                                        session = self.session[0],
+                                        datatype = self.output_folder)
                         cmd = 'phy template-gui {0}'.format(pjoin(outfolder,'params.py'))
                         os.system(cmd)
                         if self.phy:
