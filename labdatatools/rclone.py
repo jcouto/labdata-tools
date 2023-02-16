@@ -42,10 +42,10 @@ def rclone_list_files(subject = '', filters = [],
         **labdata_preferences['rclone'])
     if len(includes):
         for i in includes:
-            cmd += " --include '{0}'".format(i)
+            cmd += ' --include "{0}"'.format(i)
     if len(excludes):
         for i in excludes:
-            cmd += " --exclude '{0}'".format(i)
+            cmd += ' --exclude "{0}"'.format(i)
 
     #print(cmd,flush=True)
     out = check_output(cmd.split(' ')).decode("utf-8")
@@ -126,13 +126,22 @@ Note:
     local_path = pjoin('{path}',*fmts)  # build local path, so it is OS independent
     keys['drive_path'] = '/'.join(fmts).format(**keys)
     keys['local_path'] = local_path.format(**keys)
-    cmd = 'rclone copy --progress {drive}:{folder}/{drive_path} {local_path}'.format(**keys)
+    if '*' in keys['local_path']:
+        # then add it to the includes instead
+        toinclude = os.path.basename(keys['local_path'])
+        if not '*' in toinclude:
+            raise(ValueError("Can only add the wildkey to the last folder name" + keys['local_path']))
+        keys['local_path'] = os.path.dirname(os.path.abspath(keys['local_path']))
+        keys['drive_path'] = os.path.dirname(keys['drive_path'])
+        includes.append(toinclude)
+    cmd = 'rclone copy --progress {drive}:{folder}/{drive_path} {local_path}'.format(
+        **keys)
     if len(includes):
         for i in includes:
-            cmd += " --include '{0}'".format(i)
+            cmd += ' --include "{0}"'.format(i)
     if len(excludes):
         for i in excludes:
-            cmd += " --exclude '{0}'".format(i)
+            cmd += ' --exclude "{0}"'.format(i)
     if not overwrite:
         cmd += ' --ignore-existing'
     if verbose:
@@ -193,7 +202,7 @@ def rclone_upload_data(subject='',
         command += ' --ignore-existing'
     if len(excludes):
         for i in excludes:
-            command += " --exclude '{0}'".format(i)
+            command += ' --exclude "{0}"'.format(i)
     print(command)
     process = Popen(command, shell=True, 
                     stdout=PIPE, stderr=PIPE,

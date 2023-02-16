@@ -23,12 +23,12 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
             overwrite = overwrite,
             **kwargs)
         self.name = 'kilosort25'
+        self.output_folder = 'kilosort2.5'
         self.datatypes = ['ephys_*']
         if not datatypes == ['']:
             self.input_folder = datatypes[0]
         else:
             self.input_folder = 'ephys_*'
-        self.output_folder = 'kilosort2.5'
         
     def parse_arguments(self,arguments = []):
         parser = argparse.ArgumentParser(
@@ -45,7 +45,6 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
         self.phy = args.phy
-        
         
     def _run(self):
         folders = self.get_sessions_folders()        
@@ -69,6 +68,11 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                         self.session[0],
                         os.path.basename(infolder)))
                     if self.phy:
+                        # try to get the kilosort files
+                        from labdatatools.rclone import rclone_get_data
+                        rclone_get_data(subject = self.subject[0],
+                                        session = self.session[0],
+                                        datatype = self.output_folder)
                         cmd = 'phy template-gui {0}'.format(pjoin(outfolder,'params.py'))
                         os.system(cmd)
                         if self.phy:
@@ -170,7 +174,6 @@ fprintf('Looking for data inside %s ', outfolder)
 disp('');
 % main parameter changes from Kilosort2 to v2.5
 ops.sig        = 20;  % spatial smoothness constant for registration
-ops.fshigh     = 300; % high-pass more aggresively
 ops.nblocks    = 5; % blocks for registration. 0 turns it off, 1 does rigid registration. Replaces "datashift" option. 
 
 % is there a channel map file in this folder?
