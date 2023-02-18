@@ -53,7 +53,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
                              VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-set',
-                            action='store', default=-1, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
+                            action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance (default is 0)")
         parser.add_argument('--label-subject',
                             action='store', default=None, type=str, help = "specity subject used for initial labeling (used when analyzing new videos)")
         parser.add_argument('--label-session',
@@ -73,10 +73,10 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         parser.add_argument('--data-extension', action='store', default='.h5', type=str, help = "specify the data extension to be used, default is .h5")
         parser.add_argument('--experimenter',default=None,type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
         parser.add_argument('--extract-mode', action='store', default = 'manual', help = "specify if extraction ocurs manual (default) or automatic")
-        parser.add_argument('--extract-algo', action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default)")
-        parser.add_argument('--extract-nouser-feedback', action='store_false',
+        parser.add_argument('--extract-algo', action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default))")
+        parser.add_argument('--extract-no-user-feedback', action='store_false',
                             default = True,
-                            help="Use user feedback for extraction (default FEEDBACK)")
+                            help="Use user feedback for extraction (default True)")
         parser.add_argument('--extract-crop', action='store_true' ,default = False, help = "specify if user wants to crop video before extracting frames (default is False)")
 
         args = parser.parse_args(arguments[1:])
@@ -96,7 +96,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             self.experimenter = os.getlogin()
         self.extractparams = dict(mode = args.extract_mode,
                                   algo = args.extract_algo,
-                                  userfeedback = args.extract_nouser_feedback,
+                                  userfeedback = args.extract_no_user_feedback,
                                   crop = args.extract_crop)
         self.action = args.action
         
@@ -240,11 +240,13 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             lateral_template_GRB = {'colormap': 'summer', 'bodyparts': ['Nosetip', 'Whisker_1', 'Whisker_2', 'Whisker_3', 'Whisker_4',
                 'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.55}
             dlc.auxiliaryfunctions.edit_config(configpath, lateral_template_GRB )
+            print('cam0 bodyparts have been added to the config file.')
         elif self.video_filter == 'cam1':
             bottom_template_GRB = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
             'Nose_BottomLeft', 'Nose_BottomRight', 'Whisker_L', 'Whisker_R', 'MouthEdge_L', 'MouthEdge_R', 'Paw_FrontLeft',
             'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.6}
             dlc.auxiliaryfunctions.edit_config(configpath, bottom_template_GRB)
+            print('cam1 bodyparts have been added to the config file.')
         else:
             print('Specify which camera to use (video_filter).')
 
@@ -328,7 +330,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                           autotune=False,
                           displayiters=100,
                           saveiters=15000,
-                          maxiters=300000,
+                          maxiters=500000,
                           allow_growth=True)
 
     def _evaluate_dlc(self):
@@ -346,6 +348,10 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             print('No project found, create it first.')
         video_dir = self.get_video_dir()
         data_folder = self.get_data_folder_path()
+        if not bool(data_folder):
+            print('No data file found for the current session (', self.session[0],'). Please analyze the video first.')
+            import sys
+            sys.exit()            
         def extract_outlier_frames(
             config,
             videos,
@@ -509,7 +515,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                                 savelabeled,
                                 copy_videos=copy_videos,
                             ) #there is an error that pops up here mainly due to DLC's add.py function 
-                            #being called here. In the code it can be fixed by modifying the function and
+                            #being called here. In the code it can be fixed by modifying the function an,d
                             #switching "mklink" to "ln -s"
                         else:
                             print(
@@ -523,7 +529,8 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                         "Or, please double check your video file path"
                     )
     
-        extract_outlier_frames(config = configpath, videos=video_dir, videotype = 'avi', data_folder = data_folder[0]) #should call local function now 1/22 -GRB
+        extract_outlier_frames(config = configpath, videos = self.get_video_path(), videotype = self.video_extension, data_folder = data_folder[0], trainingsetindex = self.training_set, copy_videos=False) 
+        #should call local function now 1/22 -GRB
         #^this is popping up as not defined. maybe I need to define before this line?
         #will investigate 1/25
 
@@ -557,7 +564,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                            trainingsetindex=self.training_set,
                            save_as_csv=True,
                            destfolder=resfolder,
-                           dynamic=(False, .5, 10)) #ask Joao why this was set to True 1/25
+                           dynamic=(True, .5, 10)) #ask Joao why this was set to True 1/25
 
     def _verify_dlc(self):
         configpath = self.get_project_folder()
@@ -565,6 +572,9 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             print('No project found, create it first.')
         video_path = self.get_video_path()
         data_files = self.get_data_path()
+        # print(data_files)
+        # import sys
+        # sys.exit()
         if not len(video_path):
             print('No video files found.')
             return
@@ -572,7 +582,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         from wfield.io import VideoStack
         import numpy as np
         import pandas as pd
-        import sys
+        # import sys
         from vispy import app as vapp
         vapp.use_app()
         from vispy import plot as vp
