@@ -15,7 +15,7 @@ LABDATA_FILE= pjoin(os.path.expanduser('~'),'labdatatools','preferences.json')
 default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                'path_format':'{subject}/{session}/{datatype}',
                                'remote_queue': dict(remote='hoffman2.idre.ucla.edu',
-                                                    user='mmelin'),
+                                                    user='username'),
                                'rclone' : dict(drive = 'churchland_data',
                                                folder = 'data'),
                                'plugins_folder':pjoin(os.path.expanduser('~'),

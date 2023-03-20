@@ -137,8 +137,8 @@ ops.NchanTOT  = {nchannels}; % total number of channels in your recording
 ops.chanMap = '{channelmapfile}';
 ops.fs = {srate};   % sample rate
 ops.fshigh = 300;   % frequency for high pass filtering (150)
-ops.Th = [10 4];    % threshold on projections for each per pass 
-ops.lam = 10;       %  amplitude penalty (0 not used, 10 average, 50 is a lot) 
+ops.Th = [9 3];     % threshold on projections for each per pass ([10 4])
+ops.lam = 10;       %  amplitude penalty (0 not used, 10 average, 50 is a lot)  (10)
 ops.AUCsplit = 0.9; % isolation for spliting clusters (max = 1)
 ops.minFR = 1/50;   % minimum spike rate (Hz)
 ops.momentum = [20 400]; % number of samples to average over when building templates [start end] 
@@ -153,13 +153,11 @@ ops.nblocks = 5;         % type of data shifting (0 = none, 1 = rigid, >2 = nonr
 ops.spkTh           = -6;      % spike threshold in standard deviations (-6)
 ops.reorder         = 1;       % whether to reorder batches for drift correction. 
 ops.nskip           = 25;  % how many batches to skip for determining spike PCs
-
 ops.GPU            = 1; % has to be 1
-% ops.Nfilt        = 1024; % max number of clusters
-ops.nfilt_factor   = 4; % max number of clusters per good channel (even temporary ones)
+ops.nfilt_factor   = 8; % max number of clusters per good channel (even temporary ones) (4)
 ops.ntbuff         = 64;    % samples of symmetrical buffer for whitening and spike detection
 ops.NT             = 64*1024+ ops.ntbuff; % must be multiple of 32 + ntbuff (try decreasing if out of memory). 
-ops.whiteningRange = 32; % number of channels to use for whitening each channel
+ops.whiteningRange = 32; % number of channels to use for whitening each channel (32)
 ops.nSkipCov       = 25; % compute whitening matrix from every N-th batch
 ops.scaleproc      = 200;   % int16 scaling of whitened data
 ops.nPCs           = 3; % how many PCs to project the spikes into
@@ -173,8 +171,6 @@ ops.chanMap = fullfile(outfolder, chanMapFile);
 fprintf('Looking for data inside %s ', outfolder)
 disp('');
 % main parameter changes from Kilosort2 to v2.5
-ops.sig        = 20;  % spatial smoothness constant for registration
-ops.nblocks    = 5; % blocks for registration. 0 turns it off, 1 does rigid registration. Replaces "datashift" option. 
 
 % is there a channel map file in this folder?
 fs = dir(fullfile(inputfolder, 'chan*.mat'));

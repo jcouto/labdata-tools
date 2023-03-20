@@ -7,7 +7,7 @@ from .uge import has_uge
 from .remote import *
 
 default_excludes = ['**.phy**',                # skip .phy folders
-                    '**kilosort**temp_wh.dat', # skip kilosort temp_wh files
+                    '**temp_wh.dat',           # skip kilosort temp_wh files
                     '**suite2p**data.bin',     # skip suite2p corrected files
                     '**.ipynb_checkpoints**',
                     '**._.DS_Store**',
