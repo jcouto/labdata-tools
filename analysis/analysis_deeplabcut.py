@@ -581,7 +581,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                                 video_path, 
                                 videotype=self.video_extension, 
                                 destfolder=resfolder,
-                                trailpoints=trailpoints)
+                                trailpoints=self.trailpoints)
 
     def _verify_dlc(self):
         configpath = self.get_project_folder()
