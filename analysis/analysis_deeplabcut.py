@@ -52,6 +52,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                             action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames,\
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
                              create labeled VIDEO, VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+        parser.add_argument('--training-iterations', action='store', default=300000, type=int, help = "Specify number (integer) of iterations you want the model to train for. Default is 300,000")
         parser.add_argument('--training-set',
                             action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance (default is 0)")
         parser.add_argument('--label-subject',
@@ -85,6 +86,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         self.labeling_session = args.label_session
         self.labeling_subject = args.label_subject
         self.example_config = args.example_config
+        self.training_iterations = args.training_iterations
         self.training_set = args.training_set
         self.start = args.start #not implemented yet
         self.stop = args.stop #not implemented yet
@@ -334,7 +336,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                           autotune=False,
                           displayiters=100,
                           saveiters=15000,
-                          maxiters=500000,
+                          maxiters=self.training_iterations,
                           allow_growth=True)
 
     def _evaluate_dlc(self):
