@@ -70,6 +70,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                             help = "indicate which video to load: cam0 (default) for lateral view and cam1 for bottom view")
         parser.add_argument('--video-extension',
                             action='store', default='.avi', type=str, help = "specify video extension, default is .avi")
+        parser.add_argument('--trailpoints', action='store', default=0, type=int, help = "specify number (an integer) of trailpoints to plot when creating labeled video")
         parser.add_argument('--data-extension', action='store', default='.h5', type=str, help = "specify the data extension to be used, default is .h5")
         parser.add_argument('--experimenter',default=None,type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
         parser.add_argument('--extract-mode', action='store', default = 'manual', help = "specify if extraction ocurs manual (default) or automatic")
@@ -87,6 +88,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         self.training_set = args.training_set
         self.start = args.start #not implemented yet
         self.stop = args.stop #not implemented yet
+        self.trailpoints = args.trailpoints
 
         self.video_filter = args.video_filter
         self.video_extension = args.video_extension
@@ -578,7 +580,8 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         dlc.create_labeled_video(configpath, 
                                 video_path, 
                                 videotype=self.video_extension, 
-                                destfolder=resfolder)
+                                destfolder=resfolder,
+                                trailpoints=trailpoints)
 
     def _verify_dlc(self):
         configpath = self.get_project_folder()
