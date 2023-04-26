@@ -46,12 +46,12 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
 Animal pose analysis.
 Actions are: create, template, extract, label, train, evaluate, run, verify, outlier, refine, merge
 ''',
-            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|extract|label|train|evaluate|run|verify|outlier|refine|merge <PARAMETERS>')
+            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|extract|label|train|evaluate|run|video|verify|outlier|refine|merge <PARAMETERS>')
 
         parser.add_argument('action',
                             action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames,\
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
-                             VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+                             create labeled VIDEO, VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-set',
                             action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance (default is 0)")
         parser.add_argument('--label-subject',
@@ -85,8 +85,8 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         self.labeling_subject = args.label_subject
         self.example_config = args.example_config
         self.training_set = args.training_set
-        self.start = args.start
-        self.stop = args.stop
+        self.start = args.start #not implemented yet
+        self.stop = args.stop #not implemented yet
 
         self.video_filter = args.video_filter
         self.video_extension = args.video_extension
@@ -106,8 +106,8 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             self._run = self._use_config_template
         elif self.action == 'extract':
             self._run = self._extract_frames_gui
-        elif self.action == 'add':
-            self._run = self._add_new_video
+        # elif self.action == 'add': #not implemented yet
+        #     self._run = self._add_new_video
         elif self.action == 'label':
             self._run = self._manual_annotation
         elif self.action == 'train':
@@ -116,6 +116,8 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             self._run = self._evaluate_dlc
         elif self.action == 'run':
             self._run = self._run_dlc
+        elif self.action == 'video':
+            self._run = self._labeled_video
         elif self.action == 'verify':
             self._run = self._verify_dlc
         elif self.action == 'outlier':
@@ -565,6 +567,18 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                            save_as_csv=True,
                            destfolder=resfolder,
                            dynamic=(True, .5, 10)) #ask Joao why this was set to True 1/25
+
+    def _labeled_video(self):
+        configpath = self.get_project_folder()
+        if not os.path.exists(configpath):
+            print('No project found, create it first.')
+        video_path = self.get_video_path()
+        resfolder = self.get_analysis_folder()
+        import deeplabcut as dlc
+        dlc.create_labeled_video(configpath, 
+                                video_path, 
+                                videotype=self.video_extension, 
+                                destfolder=resfolder)
 
     def _verify_dlc(self):
         configpath = self.get_project_folder()
