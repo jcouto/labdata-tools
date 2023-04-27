@@ -103,12 +103,14 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                                   userfeedback = args.extract_no_user_feedback,
                                   crop = args.extract_crop)
         self.action = args.action
-        self.edit_config = {'start':args.start, 'stop':args.stop, 'numframes2pick':args.numframes2pick}
+        self.edit_config_params = {'start':args.start, 'stop':args.stop, 'numframes2pick':args.numframes2pick}
         
         if self.action == 'create':
             self._run = self._create_project
         elif self.action == 'template':
             self._run = self._use_config_template
+        elif self.action == 'edit':
+            self._run = self._edit_config
         elif self.action == 'extract':
             self._run = self._extract_frames_gui
         # elif self.action == 'add': #not implemented yet
@@ -262,8 +264,8 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         if not os.path.exists(configpath):
             print('No project found, create it first.')
         import deeplabcut as dlc
-        dlc.auxiliaryfunctions.edit_config(configpath, self.edit_config)
-        print(f'Config file edited. New parameters for extraction are: {self.edit_config}')  
+        dlc.auxiliaryfunctions.edit_config(configpath, self.edit_config_params)
+        print(f'Config file edited. New parameters for extraction are: {self.edit_config_params}')  
 
     def get_project_videos_path(self):
         self.session_folders = self.get_sessions_folders()
