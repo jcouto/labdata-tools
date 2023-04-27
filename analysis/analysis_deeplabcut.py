@@ -44,12 +44,12 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         parser = argparse.ArgumentParser(
             description = '''
 Animal pose analysis.
-Actions are: create, template, extract, label, train, evaluate, run, verify, outlier, refine, merge
+Actions are: create, template, edit, extract, label, train, evaluate, run, video, verify, outlier, refine, merge
 ''',
-            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|extract|label|train|evaluate|run|video|verify|outlier|refine|merge <PARAMETERS>')
+            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|edit|extract|label|train|evaluate|run|video|verify|outlier|refine|merge <PARAMETERS>')
 
         parser.add_argument('action',
-                            action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames,\
+                            action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EDIT extraction parameters in config file, EXTRACT frames, manual LABEL frames,\
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
                              create labeled VIDEO, VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-iterations', action='store', default=300000, type=int, help = "Specify number (integer) of iterations you want the model to train for. Default is 300,000")
@@ -62,9 +62,11 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         parser.add_argument('-c','--example-config',
                             action='store', default='headfixed_side', type=str)
         parser.add_argument('--start',
-                            action='store', default=0, type=float, help = "specify start frame for extracting outlier frames (not implemented yet/need to add edit config function)")
+                            action='store', default=0, type=float, help = "specify start frame for extracting outlier frames")
         parser.add_argument('--stop',
-                            action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames (not implemented yet/need to add edit config function)")
+                            action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames")
+        parser.add_argument('--numframes2pick',
+                            action='store', default=10, type=float, help = "specify number of frames to extract for labeling")
         parser.add_argument('-f','--video-filter',
                             action='store', default='cam0',
                             type=str,
@@ -88,8 +90,6 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         self.example_config = args.example_config
         self.training_iterations = args.training_iterations
         self.training_set = args.training_set
-        self.start = args.start #not implemented yet
-        self.stop = args.stop #not implemented yet
         self.trailpoints = args.trailpoints
 
         self.video_filter = args.video_filter
@@ -103,6 +103,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                                   userfeedback = args.extract_no_user_feedback,
                                   crop = args.extract_crop)
         self.action = args.action
+        self.edit_config = {'start':args.start, 'stop':args.stop, 'numframes2pick':args.numframes2pick}
         
         if self.action == 'create':
             self._run = self._create_project
@@ -255,6 +256,14 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             print('cam1 bodyparts have been added to the config file.')
         else:
             print('Specify which camera to use (video_filter).')
+
+    def _edit_config(self):
+        configpath = self.get_project_folder()
+        if not os.path.exists(configpath):
+            print('No project found, create it first.')
+        import deeplabcut as dlc
+        dlc.auxiliaryfunctions.edit_config(configpath, self.edit_config)
+        print(f'Config file edited. New parameters for extraction are: {self.edit_config}')  
 
     def get_project_videos_path(self):
         self.session_folders = self.get_sessions_folders()
@@ -567,10 +576,9 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         dlc.analyze_videos(configpath, video_path,
                            videotype=self.video_extension,
                            shuffle=1,
-                           trainingsetindex=self.training_set,
                            save_as_csv=True,
                            destfolder=resfolder,
-                           dynamic=(True, .5, 10)) #ask Joao why this was set to True 1/25
+                           dynamic=(False, .5, 10)) #ask Joao why this was set to True 1/25
 
     def _labeled_video(self):
         configpath = self.get_project_folder()
