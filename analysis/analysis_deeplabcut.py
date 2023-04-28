@@ -66,7 +66,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         parser.add_argument('--stop',
                             action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames")
         parser.add_argument('--numframes2pick',
-                            action='store', default=10, type=float, help = "specify number of frames to extract for labeling")
+                            action='store', default=10, type=int, help = "specify number of frames to extract for labeling")
         parser.add_argument('-f','--video-filter',
                             action='store', default='cam0',
                             type=str,
