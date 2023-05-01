@@ -51,7 +51,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         parser.add_argument('action',
                             action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EDIT extraction parameters in config file, EXTRACT frames, manual LABEL frames,\
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
-                             create labeled VIDEO, VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+                             create labeled VIDEO (overwrites existing video), VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-iterations', action='store', default=300000, type=int, help = "Specify number (integer) of iterations you want the model to train for. Default is 300,000")
         parser.add_argument('--training-set',
                             action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance (default is 0)")
@@ -645,7 +645,8 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                                 video_path, 
                                 videotype=self.video_extension, 
                                 destfolder=resfolder,
-                                trailpoints=self.trailpoints)
+                                trailpoints=self.trailpoints,
+                                overwrite = True)
 
     def _verify_dlc(self):
         configpath = self.get_project_folder()
