@@ -125,6 +125,7 @@ def get_filepath(subject,
         files = files[0]
     if not len(files):
         files = None
+    # If the file is not there return None but if fetch is TRUE go to the rclone to get it
     if fetch and files is None:
         print('Could not find file, trying to get it from the cloud')
         from .rclone import rclone_get_data
@@ -132,12 +133,16 @@ def get_filepath(subject,
                         session = session,
                         datatype = subfolders[0],
                         includes = [filename+extension])
-        files = get_filepath(datapath,
-                             subject,
-                             session,
-                             subfolders,
-                             filename,
-                             extension)
+        # do the rclone stuff only once (if recursive it would just keep doing it)
+        files = glob(pjoin(datapath,
+                           subject,
+                           session,
+                           pjoin(*subfolders),
+                           filename+extension))
+        if len(files) == 1:
+            files = files[0]
+        if not len(files):
+            files = None # return None if the file is not on the rclone nor in the local folder
     return files
 
 def get_labdata_preferences(prefpath = None):
