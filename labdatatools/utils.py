@@ -21,6 +21,15 @@ default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                'plugins_folder':pjoin(os.path.expanduser('~'),
                                                       'labdatatools','analysis')}
 
+default_excludes = ['**.phy**',                # skip .phy folders
+                    '**temp_wh.dat',           # skip kilosort temp_wh files
+                    '**suite2p**data.bin',     # skip suite2p corrected files
+                    '**.ipynb_checkpoints**',
+                    '**._.DS_Store**',
+                    '**.DS_Store**',
+                    '**dummy**',
+                    '**FakeSubject**']
+
 def list_subjects():
     '''
     List subjects in the data path. Takes no arguments.
