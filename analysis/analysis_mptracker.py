@@ -9,11 +9,15 @@ class AnalysisMptracker(BaseAnalysisPlugin):
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = [''],
+                 excludes = default_excludes,
                  bwlimit = None,
                  overwrite = False,
                  camera = 'cam0',
                  **kwargs):
+        '''
+labdatatools wrapper for running MousePupilTracker.
+Joao Couto - 2021
+'''
         super(AnalysisMptracker,self).__init__(
             subject = subject,
             session = session,

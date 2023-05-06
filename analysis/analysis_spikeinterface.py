@@ -13,6 +13,10 @@ class AnalysisSpikeinterface(BaseAnalysisPlugin):
                  bwlimit = None,
                  overwrite = False,
                  **kwargs):
+        '''
+labdatatools wrapper for running spike sorting through SpikeInterface.
+Joao Couto - May 2022
+        '''
         super(AnalysisSpikeinterface,self).__init__(
             subject = subject,
             session = session,
@@ -29,7 +33,11 @@ class AnalysisSpikeinterface(BaseAnalysisPlugin):
             self.input_folder = datatypes[0]
         else:
             self.input_folder = 'ephys_*'
-        
+        self.no_noise = False
+        self.no_sorting = False
+        self.no_waveforms = False
+        self.no_syncs = False
+
     def parse_arguments(self,arguments = []):
         parser = argparse.ArgumentParser(
             description = 'Analysis of spike data using kilosort version 2.5 through spike interface.',
@@ -38,11 +46,36 @@ class AnalysisSpikeinterface(BaseAnalysisPlugin):
         parser.add_argument('-p','--probe',
                             action='store', default=None, type = int,
                             help = "Probe number to sort or visualize")
+        parser.add_argument('--no-noise',
+                            action='store_true', default=False,
+                            help = "Skip the background noise computation.")
+        parser.add_argument('--no-sorting',
+                            action='store_true', default=False,
+                            help = "Skip spike sorting")
+        parser.add_argument('--no-waveforms',
+                            action='store_true', default=False,
+                            help = "Skip the waveform communication.")
+        parser.add_argument('--no-syncs',
+                            action='store_true', default=False,
+                            help = "Skip probe syncs")
+
 
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
-        
+        self.no_noise = args.no_noise
+        self.no_sorting = args.no_sorting
+        self.no_waveforms = args.no_waveforms
+        self.no_syncs = args.no_syncs
+
     def _run(self):
+        import spikeinterface.full as si
+        import spikeinterface.sorters as ss
+        
+        from spikeinterface.core import (get_global_job_kwargs,
+                                         set_global_job_kwargs)
+        job_kwargs = dict(n_jobs=-1, chunk_duration='2s', progress_bar=True)
+        set_global_job_kwargs(**job_kwargs)
+        
         folders = self.get_sessions_folders()        
         for folder in folders:
             f = glob(pjoin(folder,self.input_folder))
@@ -70,15 +103,7 @@ class AnalysisSpikeinterface(BaseAnalysisPlugin):
                     apinfile = glob(pjoin(infolder,'*.ap.bin'))
                     if not len(apinfile):
                         raise(OSError('File not found in {0}'.format(apinfile)))
-                    
-                    import spikeinterface.full as si
-                    import spikeinterface.sorters as ss
-                    
-                    from spikeinterface.core import (get_global_job_kwargs,
-                                                     set_global_job_kwargs)
-                    job_kwargs = dict(n_jobs=-1, chunk_duration='2s', progress_bar=True)
-                    set_global_job_kwargs(**job_kwargs)
-                    
+                                        
                     
                     if not os.path.exists(outfolder):
                         os.makedirs(outfolder)
@@ -91,25 +116,30 @@ class AnalysisSpikeinterface(BaseAnalysisPlugin):
                     rec2 = rec1.remove_channels(bad_channel_ids)
                     rec3 = si.phase_shift(rec2)
                     rec = si.common_reference(rec3, operator="median", reference="global")
-                    noise_levels = si.get_noise_levels(rec, return_scaled=True)
-                    if not os.path.exists(outfolder):
-                        os.makedirs(outfolder)
-                    np.save(pjoin(outfolder,f'{probename}_channel_noise_levels.npy'),noise_levels)
-                    ss.run_kilosort2_5(recording = rec,
-                                       output_folder=outfolder,
-                                       docker_image=True)
-                    we = get_waveforms_and_metrics(outfolder,aprecording = rec, apfile=apinfile)
-                    try:
-                        si.export_report(we, pjoin(outfolder,'si_report'),remove_if_exists=True, format='png')
-                    except:
-                        pass
+                    if self.no_noise:
+                        noise_levels = si.get_noise_levels(rec, return_scaled=True)
+                        if not os.path.exists(outfolder):
+                            os.makedirs(outfolder)
+                        np.save(pjoin(outfolder,f'{probename}_channel_noise_levels.npy'),noise_levels)
+                        
+                    if not self.no_sorting:
+                        ss.run_kilosort2_5(recording = rec,
+                                           output_folder=outfolder,
+                                           docker_image=True)
+                    if not self.no_waveforms:
+                        we = get_waveforms_and_metrics(outfolder,aprecording = rec, apfile=apinfile)
+                        try:
+                            si.export_report(we, pjoin(outfolder,'si_report'),remove_if_exists=True, format='png')
+                        except:
+                            pass
                     # Extract the probe sync channel
-                    sync = si.read_spikeglx(infolder,recording_folder, stream_name=stream, load_sync_channel=True)
-                    # extracting the sync channel
-                    tt = np.array(sync.get_traces(channel_ids=[sync.get_channel_ids()[-1]])).flatten()
-                    sync_onsets,sync_offsets = unpack_npix_sync(tt)
-                    syncfile = pjoin(outfolder,analysis_probe_folder,f'{probename}_syncs.h5')
-                    save_syncs(syncfile,sync_onsets,sync_offsets)
+                    if not self.no_syncs:
+                        sync = si.read_spikeglx(infolder, stream_name=stream, load_sync_channel=True)
+                        # extracting the sync channel
+                        tt = np.array(sync.get_traces(channel_ids=[sync.get_channel_ids()[-1]])).flatten()
+                        sync_onsets,sync_offsets = unpack_npix_sync(tt)
+                        syncfile = pjoin(outfolder,f'{probename}_syncs.h5')
+                        save_syncs(syncfile,sync_onsets,sync_offsets)
                     
                     if not os.path.exists(outfolder):
                         self.upload = False
@@ -173,6 +203,13 @@ def get_waveforms_and_metrics(sortfolder,
                               max_spikes_per_unit=500,
                               ms_before=1.5,ms_after=2.,
                               **job_kwargs):
+
+    import spikeinterface.full as si
+    from spikeinterface.core import (get_global_job_kwargs,
+                                     set_global_job_kwargs)
+    job_kwargs = dict(n_jobs=-1, chunk_duration='2s', progress_bar=True)
+    set_global_job_kwargs(**job_kwargs)
+    
     if aprecording is None:
         if apfile is None:
             raise(OSError('Need to supply a path to an AP file'))

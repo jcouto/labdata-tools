@@ -6,7 +6,7 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = [''],
+                 excludes = default_excludes,
                  labeling_subject = None,
                  labeling_session = None,
                  bwlimit = None,
@@ -15,6 +15,12 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
                  input_folder = None,
                  file_filter = None,
                  **kwargs):
+        '''
+labdatatools wrapper for running DeepLabCut.
+
+Gabriel Bowas Rojas, Joao Couto - 2021
+        '''
+
         super(AnalysisDeeplabcut,self).__init__(
             subject = subject,
             session = session,

@@ -9,11 +9,14 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = ['.phy'],
+                 excludes = default_excludes,
                  bwlimit = None,
                  overwrite = False,
                  **kwargs):
-        super(AnalysisKilosort25,self).__init__(
+'''
+labdatatools wrapper for running kilosort 2.5.
+Joao Couto - 2021
+'''        super(AnalysisKilosort25,self).__init__(
             subject = subject,
             session = session,
             datatypes = datatypes,
