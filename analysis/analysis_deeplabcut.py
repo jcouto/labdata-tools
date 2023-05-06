@@ -18,7 +18,7 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         '''
 labdatatools wrapper for running DeepLabCut.
 
-Gabriel Bowas Rojas, Joao Couto - 2021
+Gabriel Rojas Bowe, Joao Couto - 2021
         '''
 
         super(AnalysisDeeplabcut,self).__init__(
