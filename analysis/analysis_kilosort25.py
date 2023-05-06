@@ -1,8 +1,5 @@
-from labdatatools import *
+from labdatatools.analysis import *
 import argparse
-from glob import glob
-from os.path import join as pjoin
-import os
 
 class AnalysisKilosort25(BaseAnalysisPlugin):
     def __init__(self,subject,
@@ -13,10 +10,11 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                  bwlimit = None,
                  overwrite = False,
                  **kwargs):
-'''
+        '''
 labdatatools wrapper for running kilosort 2.5.
 Joao Couto - 2021
-'''        super(AnalysisKilosort25,self).__init__(
+        '''
+        super(AnalysisKilosort25,self).__init__(
             subject = subject,
             session = session,
             datatypes = datatypes,

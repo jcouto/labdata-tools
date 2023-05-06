@@ -1,8 +1,5 @@
-from labdatatools import BaseAnalysisPlugin
+from labdatatools.analysis import *
 import argparse
-from glob import glob
-from os.path import join as pjoin
-import os
 
 class AnalysisMptracker(BaseAnalysisPlugin):
     def __init__(self,subject,
