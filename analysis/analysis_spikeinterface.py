@@ -118,12 +118,13 @@ Joao Couto - May 2022
                         if not os.path.exists(outfolder):
                             os.makedirs(outfolder)
                         np.save(pjoin(outfolder,f'{probename}_channel_noise_levels.npy'),noise_levels)
-                        
                     if not self.no_sorting:
+                        print(f'Running kilosort on {infolder} and saving in {outfolder}')
                         ss.run_kilosort2_5(recording = rec,
                                            output_folder=outfolder,
                                            docker_image=True)
                     if not self.no_waveforms:
+                        print(f'Running waveforms and metrics on {outfolder}') 
                         we = get_waveforms_and_metrics(outfolder,aprecording = rec, apfile=apinfile)
                         try:
                             si.export_report(we, pjoin(outfolder,'si_report'),remove_if_exists=True, format='png')
@@ -131,6 +132,7 @@ Joao Couto - May 2022
                             pass
                     # Extract the probe sync channel
                     if not self.no_syncs:
+                        print(f'Extracting syncs from {outfolder}') 
                         sync = si.read_spikeglx(infolder, stream_name=stream, load_sync_channel=True)
                         # extracting the sync channel
                         tt = np.array(sync.get_traces(channel_ids=[sync.get_channel_ids()[-1]])).flatten()

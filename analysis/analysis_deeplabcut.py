@@ -191,6 +191,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             for d in self.datatypes:
                 tmp = glob(pjoin(session,d,'*'+self.video_extension))
                 for f in tmp:
+                    print(f)
                     if not self.video_filter is None:
                         if self.video_filter in f:
                             video_path.append(f)
@@ -629,7 +630,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             print('No project found, create it first.')
         video_path = self.get_video_path()
         if not len(video_path):
-            print('No video files found.')
+            print('No video files found in.')
             return
         resfolder = self.get_analysis_folder()
         import deeplabcut as dlc
