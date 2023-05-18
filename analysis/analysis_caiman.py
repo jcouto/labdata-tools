@@ -146,9 +146,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #File Selection
         session_folders = self.get_sessions_folders() #Go thorugh the folders
         #print(session_folders)
-        fnames = sorted(glob(os.path.join(session_folders[0], self.datatypes[0], '*.avi')))
-        inputFolder = os.path.join(session_folders[0], self.datatypes[0]) #Store the miniscope folder for info
-
+        fnames = sorted(glob(os.path.join(session_folders[0], self.datatypes[0], '*.avi'))) #These are the complete video paths
         outputFolder = os.path.join(session_folders[0], self.name) #Set path directory to caiman folder
         if not os.path.exists(outputFolder):
             os.mkdir(outputFolder)
@@ -162,7 +160,6 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         resize_runfile_template = '''
         %----------The formating the inputs-----------------------------------
         outputFolder = '{outputFolder}';
-        inputFolder = '{inputFolder}';
         fnames =  split('{fnames}', ',');
         scalingFactor = {scalingFactor};
 
@@ -170,7 +167,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         %----------The matlab code--------------------------------------------
         for k = 1:length(fnames)
             current_video = fnames{k}; % Make sure to only have to access the cell array elements once, to avoid issues with the braces...
-            vidObj = VideoReader(fullfile(inputFolder, current_video));
+            vidObj = VideoReader(current_video);
             while hasFrame(vidObj)
                 video = read(vidObj);
             end
@@ -188,7 +185,10 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         binned_video = imresize(video,scalingFactor);
 
-        vidWriter = VideoWriter(fullfile(outputFolder,['binned_' current_video]));
+        ideoReader(obj, varargin{:});
+
+        [~, video_name] = fileparts(current_video);
+        vidWriter = VideoWriter(fullfile(outputFolder,['binned_' video_name]));
         open(vidWriter)
         framesOut(1:size(binned_video,4)) = struct('cdata',[],'colormap',[]);
         for n = 1:size(binned_video,4)
@@ -213,7 +213,6 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         with open(resize_runfile,'w') as fd:
             fd.write(resize_runfile_template.format(
                 outputFolder = outputFolder,
-                inputFolder = inputFolder,
                 fnames = fnames_string,
                 scalingFactor = scaling_factor,
                 k ='{k}'))
