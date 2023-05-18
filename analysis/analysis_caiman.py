@@ -169,7 +169,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         %----------The matlab code--------------------------------------------
         for k = 1:length(fnames)
-            vidObj = VideoReader(fullfile(inputFolder, fnames{k}));
+            current_video = fnames{k}; % Make sure to only have to access the cell array elements once, to avoid issues with the braces...
+            vidObj = VideoReader(fullfile(inputFolder, current_video));
             while hasFrame(vidObj)
                 video = read(vidObj);
             end
@@ -187,7 +188,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         binned_video = imresize(video,scalingFactor);
 
-        vidWriter = VideoWriter(fullfile(outputFolder,['binned_' fnames{k}]));
+        vidWriter = VideoWriter(fullfile(outputFolder,['binned_' current_video]));
         open(vidWriter)
         framesOut(1:size(binned_video,4)) = struct('cdata',[],'colormap',[]);
         for n = 1:size(binned_video,4)
