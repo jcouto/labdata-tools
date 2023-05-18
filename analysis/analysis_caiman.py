@@ -215,7 +215,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                 outputFolder = outputFolder,
                 inputFolder = inputFolder,
                 fnames = fnames_string,
-                scalingFactor = scaling_factor),
+                scalingFactor = scaling_factor,
                 k ='{k}'))
         cmd = """matlab -nodisplay -nosplash -r "run('{0}');exit;" """
         os.system(cmd.format(resize_runfile))
