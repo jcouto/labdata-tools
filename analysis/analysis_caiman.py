@@ -150,8 +150,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         inputFolder = os.path.join(session_folders[0], self.datatypes[0]) #Store the miniscope folder for info
 
         outputFolder = os.path.join(session_folders[0], self.name) #Set path directory to caiman folder
-        if not os.path.exists(outputPath):
-            os.mkdir(outputPath)
+        if not os.path.exists(outputFolder):
+            os.mkdir(outputFolder)
 
         scaling_factor = 0.5 #Shrink image size by factor 2
         cropping_ROI = None #No cropping implemented so far
@@ -163,13 +163,13 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         %----------The formating the inputs-----------------------------------
         outputFolder = '{outputFolder}';
         inputFolder = '{inputFolder}';
-        fnames = ;
+        fnames =  split('{fnames}', ',');
         scalingFactor = {scalingFactor};
 
 
         %----------The matlab code--------------------------------------------
-        for k = 1:length(fileNames)
-            vidObj = VideoReader(fullfile(filePath, fileNames{k}));
+        for k = 1:length(fnames)
+            vidObj = VideoReader(fullfile(inputFolder, fnames{k}));
             while hasFrame(vidObj)
                 video = read(vidObj);
             end
@@ -187,10 +187,10 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         binned_video = imresize(video,scalingFactor);
 
-        vidWriter = VideoWriter(fullfile(fileparts(filePath(1:end-1)),'caiman',['binned_' fileNames{k}]));
+        vidWriter = VideoWriter(fullfile(outputFolder,['binned_' fnames{k}]));
         open(vidWriter)
         framesOut(1:size(binned_video,4)) = struct('cdata',[],'colormap',[]);
-        for n = 1:size(binned_video,3)
+        for n = 1:size(binned_video,4)
             framesOut(n).cdata = binned_video(:,:,:,n);
             writeVideo(vidWriter,framesOut(n));
         end
@@ -214,7 +214,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                 outputFolder = outputFolder,
                 inputFolder = inputFolder,
                 fnames = fnames_string,
-                scalingFactor = scalingFactor),
+                scalingFactor = scaling_factor),
+                k ='{k}',
                 k ='{k}'))
         cmd = """matlab -nodisplay -nosplash -r "run('{0}');exit;" """
         os.system(cmd.format(resize_runfile))
