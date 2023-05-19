@@ -185,8 +185,6 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         binned_video = imresize(video,scalingFactor);
 
-        ideoReader(obj, varargin{:});
-
         [~, video_name] = fileparts(current_video);
         vidWriter = VideoWriter(fullfile(outputFolder,['binned_' video_name]));
         open(vidWriter)
