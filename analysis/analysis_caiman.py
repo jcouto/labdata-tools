@@ -15,6 +15,9 @@ import json
 config_filename = 'caiman_default_params.json'
 
 defaults_caiman = dict(
+    downsampling_params = dict(
+        scaling_factor = 0.5
+        ),
     motion_correction_params = dict(
         fr = 30,                          # movie frame rate
         decay_time = 0.6,  #length of a typical transient in seconds
@@ -78,9 +81,9 @@ def caiman_load_params(fname = config_filename):
 
 class AnalysisCaiman(BaseAnalysisPlugin):
 
-    Ain = None # possibility to seed with predetermined binary masks, if known, it is the initial estimate of spatial filters
-    stride_cnmf = 20 # amount of overlap between the patches in pixels
-    gnb = 0
+    #Ain = None # possibility to seed with predetermined binary masks, if known, it is the initial estimate of spatial filters
+    #stride_cnmf = 20 # amount of overlap between the patches in pixels
+    #gnb = 0
 
     def __init__(self,subject,
                  session = None,
@@ -119,13 +122,20 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         parser.add_argument('-p','--params',
                             action='store', type=str, help = "parameter file or path (default is "+config_filename +")",
                             default = config_filename)
+        parser.add_argument('--n_processes',
+                            action='store', type=str, help = "number of parallel processess for motion correction and cnmfe",
+                            default = 2)
+
         args = parser.parse_args(arguments[1:])
 
         self.action = args.action
         print(self.action)
         self.params = caiman_load_params(args.params)
+        self.n_processes = args.n_processes
 
-        if self.action == 'downsample_videos':
+        if selt.action == 'create': #Method to generate a parameter file
+            self._run = self._run_create
+        elif self.action == 'downsample_videos':
             self._run = self._run_downsampling
         elif self.action == 'motion_correction':
             self._run = self._run_motion_correction
@@ -135,23 +145,107 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             self._run = self._run_cnmfe
         else:
             raise(ValueError('Available command are: downsample_videos, motion_correction, spatiotemporal_correlation, run_cnmfe.'))
+    #---------------------------------------------------------------------------
+    def load_caiman_params(self):
+        '''Load a previously created caiman parameters file'''
+
+        session_folders = self.get_sessions_folders() #Go thorugh the folders
+        caiman_params_file = pjoin(session_folders, self.name, 'caiman_params.json')
+        assert os.path.exists(caiman_params_file), "Make sure to create the caiman_params.json file first by running the create method."
+        #Load the params
+        with open(caiman_params_file, 'r') as f:
+            caiman_params = json.load(f)
+
+        return caiman_params
+    #-----------------------------------------------------------------------
+
+    def _run_create(self):
+        '''Create method to download the data, create the caiman folder and write
+        the parameters file'''
+
+        #Define the default paramters, one dict per action, except spatiotemporal correlation
+        caiman_params = dict(
+            downsampling_params = dict(
+                scaling_factor = 0.5 #This will shrink the image to half size along x and y
+                ),
+            motion_correction_params = dict(
+                fr = None,                          # movie frame rate
+                decay_time = 0.6,  #length of a typical transient in seconds
+                pw_rigid = False, # flag for pw-rigid motion correction
+                gSig_filt = (3, 3), # size of filter, in general gSig (see below), change this one if algorithm does not work
+                max_shifts = (5, 5), # maximum allowed rigid shift
+                strides = (48, 48), # start a new patch for pw-rigid motion correction every x pixels
+                overlaps = (24, 24), # overlap between pathes (size of patch strides+overlap) maximum deviation allowed for patch with respect to rigid shifts
+                max_deviation_rigid = 3,
+                border_nan = 'copy', #Assignment of border pixel
+                ),
+            cnmfe_params = dict(
+                method_init = 'corr_pnr',
+                p = 1,               # order of the autoregressive system
+                K = None,            # upper bound on number of components per patch, in general None for 1p data
+                gSig = (3, 3),       # gaussian width of a 2D gaussian kernel, which approximates a neuron
+                gSiz = (13, 13),     # average diameter of a neuron, in general 4*gSig+1
+                Ain = None,
+                merge_thr = 0.7,      # merging threshold, max correlation allowed
+                rf = 80,             # half-size of the patches in pixels. e.g., if rf=40, patches are 80x80
+                stride = 20,    # amount of overlap between the patches in pixels
+                tsub = 2,            # downsampling factor in time for initialization, increase if you have memory problems
+                ssub = 1,            # downsampling factor in space for initialization, increase if you have memory problems
+                low_rank_background = None,  # None leaves background of each patch intact,True performs global low-rank approximation if gnb>0
+                nb = 0,             # number of background components (rank) if positive,
+                nb_patch = 0,        # number of background components (rank) per patch if gnb>0,
+                min_corr = 0.7,       # min peak value from correlation image
+                min_pnr = 8,        # min peak to noise ration from PNR image
+                ssub_B = 2,          # additional downsampling factor in space for background
+                ring_size_factor = 1.4, # radius of ring is gSiz*ring_size_factor
+                only_init = True,    # set it to True to run CNMF-E
+                update_background_components = True,  # sometimes setting to False improve the results
+                normalize_init = False,               # just leave as is
+                center_psf = True,                    # leave as is for 1 photon
+                del_duplicates = True                # whether to remove duplicates from initialization
+                )
+            )
+
+        #Extract the real frame rate from the miniscope_metadata
+        session_folder = self.get_sessions_folders() #Go thorugh the folders
+        miniscope_metadata_file = pjoin(session_folders, self.datatypes[0], 'metaData.json')
+        with open(miniscope_metadata_file, 'r') as f:
+            miniscope_metadata = json.load(f)
+        caiman_params['motion_correction_params']['fr'] = miniscope_metadata['frameRate']
+
+        #Save a caiman parameters file
+        outputFolder = os.path.join(session_folder[0], self.name) #Set path directory to caiman folder
+        if not os.path.exists(outputFolder):
+            os.mkdir(outputFolder)
+        with open(pjoin(outputFolder, 'caiman_params.json'),'w') as fd:
+            json.dump(caiman_params, fd, indent=True)
+    #--------------------------------------------------------------------------
 
     def _run_downsampling(self): #UNDER CONSTRUCTION! Spatially downsample .avi file
+        '''Spatially bin the movies'''
+        #TODO: create a simlink to the original movies if the scaling_factor is 1.
 
         from time import time # For time logging
         #Possibly import os here
         #import cv2
         #import numpy as np
 
-        #File Selection
-        session_folders = self.get_sessions_folders() #Go thorugh the folders
+#        #Input check
+#        session_folders = self.get_sessions_folders() #Go thorugh the folders
+#        caiman_params_file = pjoin(session_folders, self.name, 'caiman_params.json')
+#        assert os.path.exists(caiman_params_file), "Make sure to create the caiman_params.json file first by running the create method."
+#        #Load the params
+#        with open(caiman_params_file, 'r') as f:
+#            caiman_params = json.load(f)
+
         #print(session_folders)
         fnames = sorted(glob(os.path.join(session_folders[0], self.datatypes[0], '*.avi'))) #These are the complete video paths
         outputFolder = os.path.join(session_folders[0], self.name) #Set path directory to caiman folder
         if not os.path.exists(outputFolder):
             os.mkdir(outputFolder)
 
-        scaling_factor = 0.5 #Shrink image size by factor 2
+        caiman_params = self.load_caiman_params() #Use the loader function defined above
+        scaling_factor = caiman_params['downsampling_params']['scaling_factor']
         cropping_ROI = None #No cropping implemented so far
 
         preproc_t = time()
@@ -246,35 +340,47 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 #        np.save(os.path.join(outputPath, 'cropping_binning.npy'), preproc_dict)
         print(f'Video binning done in {round(time() - preproc_t)} seconds')
         print('------------------------------------------------')
-
+    #-----------------------------------------------------------------------
 
     def _run_motion_correction(self):
+        '''Perform image registration to correct for image shifts due to
+        movements of the field of view'''
 
         import caiman as cm
-        from caiman.source_extraction import cnmf
+        #from caiman.source_extraction import cnmf
         from caiman.motion_correction import MotionCorrect
         from caiman.source_extraction.cnmf import params as params
 
-        import os #For all the file path manipulations
+        #import os #For all the file path manipulations
         from time import time # For timne logging
-        import sys #To apppend the python path for the selection GUI
+        #import sys #To apppend the python path for the selection GUI
         import numpy as np
-
-        c, dview, n_processes = cm.cluster.setup_cluster(backend='local',
-                                                 n_processes=2,  # number of process to use, changed to 2-cores temporarily cause my pc is hot garbo
-                                                 single_thread=False)
 
 
         #File Selection:
         session_folders = self.get_sessions_folders() #Go thorugh the folders
-        #print(session_folders)
         fnames = sorted(glob(os.path.join(session_folders[0], self.name, 'binned_*.avi')))
 
+        #Load and initialize parameters
+        caiman_params = self.load_caiaman_params()
+        opts = params.CNMFParams(params_dict = caiman_params['motion_correction_params'])
+
+        #Start a cluster with the specified number of workers
+        c, dview, n_processes = cm.cluster.setup_cluster(backend = 'local',
+                                                 n_processes = self.n_processes,
+                                                 single_thread = False)
 
 
-        # Initial CNMF params:
-        opts = params.CNMFParams(params_dict=self.params['motion_correction_params'])
-        opts.change_params(params_dict= {'fnames': fnames})
+#        #File Selection:
+#        session_folders = self.get_sessions_folders() #Go thorugh the folders
+#        #print(session_folders)
+#        fnames = sorted(glob(os.path.join(session_folders[0], self.name, 'binned_*.avi')))
+#
+#
+#
+#        # Initial CNMF params:
+#        opts = params.CNMFParams(params_dict=self.params['motion_correction_params'])
+#        opts.change_params(params_dict= {'fnames': fnames})
         mc_start_time = time()
 
         # Motion Correction Step:
@@ -291,7 +397,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
 
         bord_px = 0 if opts.motion['border_nan'] == 'copy' else bord_px
-        cm.save_memmap(fname_mc, base_name='memmap_', order='C',
+        mc_movie_file = cm.save_memmap(fname_mc, base_name='mc_movie_', order='C',
                                    border_to_0=bord_px) #Saves the memory mappable file to the caiman folder
 
         mc_end_time = time()
@@ -301,14 +407,23 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         #Save the Shift Data from Motion Correction:
         rigid_shifts = np.array(mc.shifts_rig) # Retrieve shifts from mc object
-
         outputPath = os.path.join(session_folders[0], self.name) #Set path directory to same location as data
-
         if not os.path.exists(outputPath):
             os.mkdir(outputPath)
 
-        np.save(outputPath + '/rigid_shifts', rigid_shifts) #Save the np array to npy file
+        np.save(pjoin(outputPath, 'motion_correction_shifts', rigid_shifts) #Save the np array to npy file
         dview.terminate() #Terminate the processes
+
+        #Do a round of clean-up before the uploading the results
+        for f in fname_mc:
+            os.remove(f) #Delete all the originally generated motion corrected movie files in fortran order
+
+        c_files = glob(pjoin(outputPath, '*.mmap'))
+        c_files.remove(mc_movie_file)
+        for f in c_files:
+            os.remove(f) #Now also delete all the C ordered files that annoyingly also get created with the last call to save_mmap!
+
+    #---------------------------------------------------------------------------
 
     def _run_spatiotemporal_correlation(self):
         import caiman as cm
@@ -427,7 +542,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
        # Run CNMF-E on Patches:
         cnmfe_start_time = time()
 
-        cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, Ain = None, params=opts)
+        cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, Ain = self.params['cnmfe_params']['Ain'], params=opts)
 #        import ipdb
 #        ipdb.set_trace()
         cnm.fit(images)
