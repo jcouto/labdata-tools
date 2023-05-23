@@ -202,7 +202,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                 update_background_components = True,  # sometimes setting to False improve the results
                 normalize_init = False,               # just leave as is
                 center_psf = True,                    # leave as is for 1 photon
-                del_duplicates = True                # whether to remove duplicates from initialization
+                del_duplicates = True,                # whether to remove duplicates from initialization
+                border_pix = 0 #Exclusion border so that cnmfe patches don't go all the way until the edge of the image
                 )
             )
 
@@ -411,7 +412,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         if not os.path.exists(outputPath):
             os.mkdir(outputPath)
 
-        np.save(pjoin(outputPath, 'motion_correction_shifts', rigid_shifts) #Save the np array to npy file
+        np.save(pjoin(outputPath, 'motion_correction_shifts', rigid_shifts)) #Save the np array to npy file
         dview.terminate() #Terminate the processes
 
         #Do a round of clean-up before the uploading the results
@@ -426,49 +427,57 @@ class AnalysisCaiman(BaseAnalysisPlugin):
     #---------------------------------------------------------------------------
 
     def _run_spatiotemporal_correlation(self):
-        import caiman as cm
-        from caiman.source_extraction import cnmf
-        from caiman.utils.visualization import inspect_correlation_pnr
-        from caiman.source_extraction.cnmf import params as params
+        '''Calculate median projection, spatiotemporal correlation and peak-to-noise ratio images. These are useful when possibly aligning one session to the other later on'''
 
-        import os #For all the file path manipulations
+        import caiman as cm
+        # from caiman.source_extraction import cnmf
+        # from caiman.utils.visualization import inspect_correlation_pnr
+        # from caiman.source_extraction.cnmf import params as params
+
+        # import os #For all the file path manipulations
         from time import time # For time logging
-        import sys #To apppend the python path for the selection GUI
+        #import sys #To apppend the python path for the selection GUI
         import numpy as np
 
-        c, dview, n_processes = cm.cluster.setup_cluster(backend='local',
-                                                 n_processes=2,  # number of process to use, changed to 2-cores temporarily cause my pc is hot garbo
-                                                 single_thread=False)
-
-        #Set up CNMFE Params:
-        opts = params.CNMFParams(params_dict=self.params['cnmfe_params'])
-
-        #Load Memory Mappable File and Rigid Shifts File:
+        #File Selection:
         session_folders = self.get_sessions_folders() #Go thorugh the folders
+        outputPath = os.path.join(session_folders[0], self.name) #Set output path directory to same location as data
+        
+        #Load and initialize parameters
+        caiman_params = self.load_caiaman_params()
+        opts = params.CNMFParams(params_dict = caiman_params['cnmfe_params'])
+
+        # c, dview, n_processes = cm.cluster.setup_cluster(backend='local',
+        #                                          n_processes=2,  # number of process to use, changed to 2-cores temporarily cause my pc is hot garbo
+        #                                          single_thread=False)
+
+        # #Set up CNMFE Params:
+        # opts = params.CNMFParams(params_dict=self.params['cnmfe_params'])
+
+        # #Load Memory Mappable File and Rigid Shifts File:
+        # session_folders = self.get_sessions_folders() #Go thorugh the folders
         #print(session_folders)
-        rigid_shifts = os.path.join(session_folders[0], self.name, 'rigid_shifts.npy' ) #Load rigid shifts file
-        memmap_file = glob(os.path.join(session_folders[0], self.name, 'memmap_*.mmap'))[0] #Load mmap file with order C.
+        #--------Replaced by a border_pix param in the file--------------------
+        #rigid_shifts = os.path.join(session_folders[0], self.name, 'motion_correction_shifts.npy' ) #Load rigid shifts file
+        #-------------------------------------------------------------
+        mc_movie_file = glob(os.path.join(session_folders[0], self.name, '*.mmap'))[0] #Load mmap file with order C.
         #print(memmap_file)
 
-        outputPath = os.path.join(session_folders[0], self.name) #Set output path directory to same location as data
-
-
-        Yr, dims, T = cm.load_memmap(memmap_file, mode='r+')
+        Yr, dims, T = cm.load_memmap(mc_movie_file, mode='r+')
         images = Yr.T.reshape((T,) + dims, order='F')
 
 #        if opts.motion['pw_rigid']:
 #            bord_px = np.ceil(np.maximum(np.max(np.abs(mc.x_shifts_els)),
 #                                         np.max(np.abs(mc.y_shifts_els)))).astype(np.int)
 
-        #Use the rigid shifts file to decide on pixels to exclude from border
-        if opts.motion['border_nan'] == 'copy':
-            bord_px = 0
-        else:
-            bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
+        # #Use the rigid shifts file to decide on pixels to exclude from border
+        # if opts.motion['border_nan'] == 'copy':
+        #     bord_px = 0
+        # else:
+        #     bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
 
 
         #Remove pixels with basically zero intensity but very few
-
         medProj = np.median(images, axis=0, keepdims=True)
         median_bool = np.squeeze(medProj < 1)
         for k in range(images.shape[0]):
@@ -477,8 +486,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             images[k,:,:] = temp
 
 
-        #Compute spatiotemporal correlations on images:
-
+        #Compute spatiotemporal correlations on images
         corr_image_start = time()
         cn_filter, pnr = cm.summary_images.correlation_pnr(images[::1], gSig=opts.init['gSig'][0], swap_dim=False) #Computes Peak-to-Noise Ratio
         #Compute the correlation and pnr image on every frame. This takes longer but will yield
@@ -487,9 +495,13 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
 
         print(f"Computed Correlations in: {corr_image_end - corr_image_start} s.")
-
-        np.save(outputPath + '/spatio_temporal_correlation_image', cn_filter)
-        np.save(outputPath + '/median_projection', medProj)
+        
+        out_dict = dict({'median_image': medProj,
+                         'spatio_temporal_correlation': cn_filter,
+                         'peak_to_noise': pnr})
+        np.save(outputPath, out_dict, allow_pickle = True) #Use np.load(...,allow_pickle=True).tolist() to load the file
+        # np.save(outputPath + '/spatio_temporal_correlation_image', cn_filter)
+        # np.save(outputPath + '/median_projection', medProj)
         # if your images file is too long this computation will take unnecessarily
         # long time and consume a lot of memory. Consider changing images[::1] to
         # images[::5] or something similar to compute on a subset of the data
@@ -502,40 +514,67 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #print(f'The minimum peak to noise ratio is: {opts.init[min_pnr]}')  # min peak to noise ratio
 
         # Shuts down parallel pool and restarts
-        dview.terminate()
+        #dview.terminate()
 
+    #-------------------------------------------------------------------------
 
+#TODO: Should the spatiotemporal correlation and the cnmfe be merged together?
     def _run_cnmfe(self): #Seperate spatiotemporal correlation analysis and cnmfe
+        '''Run the cnmfe model'''
+    
         import caiman as cm
         from caiman.source_extraction import cnmf
-        from caiman.utils.visualization import inspect_correlation_pnr
+        #from caiman.utils.visualization import inspect_correlation_pnr
         from caiman.source_extraction.cnmf import params as params
         import numpy as np
 
         from time import time # For time logging
-
-        c, dview, n_processes = cm.cluster.setup_cluster(backend='local',
-                                                         n_processes=2,  # i have hot garbo computer
-                                                         single_thread=False)
-        #Set up CNMFE Params:
-        opts = params.CNMFParams(params_dict=self.params['cnmfe_params'])
-
-        session_folders = self.get_sessions_folders() #Go through the folders
-        #print(session_folders)
-        rigid_shifts = os.path.join(session_folders[0], self.name, 'rigid_shifts.npy' ) #Load rigid shifts file
-        memmap_file = glob(os.path.join(session_folders[0], self.name, 'memmap_*.mmap'))[0] #Load mmap file with order C.
+        
+        #Get the respective session folder
+        session_folders = self.get_sessions_folders() #Go thorugh the folders
         outputPath = os.path.join(session_folders[0], self.name) #Set output path directory to same location as data
-
-        Yr, dims, T = cm.load_memmap(memmap_file, mode='r+')
+        
+        #Load and initialize parameters
+        caiman_params = self.load_caiaman_params()
+        opts = params.CNMFParams(params_dict = caiman_params['cnmfe_params'])
+        
+        #Load the data
+        #rigid_shifts = os.path.join(session_folders[0], self.name, 'motion_correction_shifts.npy' ) #Load rigid shifts file
+        mc_movie_file = glob(os.path.join(session_folders[0], self.name, '*.mmap'))[0] #Load mmap file with order C.
+       
+        Yr, dims, T = cm.load_memmap(mc_movie_file, mode='r+')
         images = Yr.T.reshape((T,) + dims, order='F')
-
         opts.change_params(params_dict = {'dims': dims})
+        
+        # #Decide what to do with the unassigned border of the image that may
+        # #be shifted outside the field of view due to motion.
+        # if opts.motion['border_nan'] == 'copy':
+        #     bord_px = 0
+        # else:
+        #     bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
+        
+        c, dview, n_processes = cm.cluster.setup_cluster(backend = 'local',
+                                                         n_processes = self.n_processes,  
+                                                         single_thread = False)
+        # #Set up CNMFE Params:
+        # opts = params.CNMFParams(params_dict=self.params['cnmfe_params'])
+
+        # session_folders = self.get_sessions_folders() #Go through the folders
+        #print(session_folders)
+        # rigid_shifts = os.path.join(session_folders[0], self.name, 'rigid_shifts.npy' ) #Load rigid shifts file
+        # memmap_file = glob(os.path.join(session_folders[0], self.name, 'memmap_*.mmap'))[0] #Load mmap file with order C.
+        # outputPath = os.path.join(session_folders[0], self.name) #Set output path directory to same location as data
+
+        # Yr, dims, T = cm.load_memmap(memmap_file, mode='r+')
+        # images = Yr.T.reshape((T,) + dims, order='F')
+
+        # opts.change_params(params_dict = {'dims': dims})
 
 
-        if opts.motion['border_nan'] == 'copy':
-            bord_px = 0
-        else:
-            bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
+        # if opts.motion['border_nan'] == 'copy':
+        #     bord_px = 0
+        # else:
+        #     bord_px = np.ceil(np.max(np.abs(rigid_shifts))).astype(np.int)
 
 
 
@@ -546,15 +585,14 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 #        import ipdb
 #        ipdb.set_trace()
         cnm.fit(images)
-        cnm.estimates.detrend_df_f() #Detrend/De-Noising
-
+        cnm.estimates.detrend_df_f() #Detrend the fluorescence traces
 
         #Display elapsed time for CNMFE step
         cnmfe_end_time = time()
         print(f"Ran Initialization and Fit CNMFE Model in: {round(cnmfe_end_time - cnmfe_start_time)} s.")
 
         # Save first round of results
-        cnm.save(outputPath + '/firstRound.hdf5')
+        cnm.save(outputPath + '/uncurated_caiman_results.hdf5')
         print("CaImAn Analysis has been Completed.")
 
         # Shuts down parallel pool and restarts
