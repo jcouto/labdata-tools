@@ -6,7 +6,7 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = [''],
+                 excludes = default_excludes,
                  labeling_subject = None,
                  labeling_session = None,
                  bwlimit = None,
@@ -15,6 +15,12 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
                  input_folder = None,
                  file_filter = None,
                  **kwargs):
+        '''
+labdatatools wrapper for running DeepLabCut.
+
+Gabriel Rojas Bowe, Joao Couto - 2021
+        '''
+
         super(AnalysisDeeplabcut,self).__init__(
             subject = subject,
             session = session,
@@ -44,16 +50,17 @@ class AnalysisDeeplabcut(BaseAnalysisPlugin):
         parser = argparse.ArgumentParser(
             description = '''
 Animal pose analysis.
-Actions are: create, template, extract, label, train, evaluate, run, verify, outlier, refine, merge
+Actions are: create, template, edit, extract, label, train, evaluate, run, video, verify, outlier, refine, merge
 ''',
-            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|extract|label|train|evaluate|run|verify|outlier|refine|merge <PARAMETERS>')
+            usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|edit|extract|label|train|evaluate|run|video|verify|outlier|refine|merge <PARAMETERS>')
 
         parser.add_argument('action',
-                            action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EXTRACT frames, manual LABEL frames,\
+                            action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EDIT extraction parameters in config file, EXTRACT frames, manual LABEL frames,\
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
-                             VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+                             create labeled VIDEO (overwrites existing video), VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
+        parser.add_argument('--training-iterations', action='store', default=300000, type=int, help = "Specify number (integer) of iterations you want the model to train for. Default is 300,000")
         parser.add_argument('--training-set',
-                            action='store', default=-1, type=int, help = "specify which training set index to use for training and evaluating the network's performance")
+                            action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance (default is 0)")
         parser.add_argument('--label-subject',
                             action='store', default=None, type=str, help = "specity subject used for initial labeling (used when analyzing new videos)")
         parser.add_argument('--label-session',
@@ -61,22 +68,25 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         parser.add_argument('-c','--example-config',
                             action='store', default='headfixed_side', type=str)
         parser.add_argument('--start',
-                            action='store', default=0, type=float, help = "specify start frame for extracting outlier frames (not implemented yet/need to add edit config function)")
+                            action='store', default=0, type=float, help = "specify start frame for extracting outlier frames")
         parser.add_argument('--stop',
-                            action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames (not implemented yet/need to add edit config function)")
+                            action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames")
+        parser.add_argument('--numframes2pick',
+                            action='store', default=10, type=int, help = "specify number of frames to extract for labeling")
         parser.add_argument('-f','--video-filter',
                             action='store', default='cam0',
                             type=str,
                             help = "indicate which video to load: cam0 (default) for lateral view and cam1 for bottom view")
         parser.add_argument('--video-extension',
                             action='store', default='.avi', type=str, help = "specify video extension, default is .avi")
+        parser.add_argument('--trailpoints', action='store', default=0, type=int, help = "specify number (an integer) of trailpoints to plot when creating labeled video")
         parser.add_argument('--data-extension', action='store', default='.h5', type=str, help = "specify the data extension to be used, default is .h5")
         parser.add_argument('--experimenter',default=None,type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
         parser.add_argument('--extract-mode', action='store', default = 'manual', help = "specify if extraction ocurs manual (default) or automatic")
-        parser.add_argument('--extract-algo', action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default)")
-        parser.add_argument('--extract-nouser-feedback', action='store_false',
+        parser.add_argument('--extract-algo', action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default))")
+        parser.add_argument('--extract-no-user-feedback', action='store_false',
                             default = True,
-                            help="Use user feedback for extraction (default FEEDBACK)")
+                            help="Use user feedback for extraction (default True)")
         parser.add_argument('--extract-crop', action='store_true' ,default = False, help = "specify if user wants to crop video before extracting frames (default is False)")
 
         args = parser.parse_args(arguments[1:])
@@ -84,9 +94,9 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         self.labeling_session = args.label_session
         self.labeling_subject = args.label_subject
         self.example_config = args.example_config
+        self.training_iterations = args.training_iterations
         self.training_set = args.training_set
-        self.start = args.start
-        self.stop = args.stop
+        self.trailpoints = args.trailpoints
 
         self.video_filter = args.video_filter
         self.video_extension = args.video_extension
@@ -96,18 +106,21 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             self.experimenter = os.getlogin()
         self.extractparams = dict(mode = args.extract_mode,
                                   algo = args.extract_algo,
-                                  userfeedback = args.extract_nouser_feedback,
+                                  userfeedback = args.extract_no_user_feedback,
                                   crop = args.extract_crop)
         self.action = args.action
+        self.edit_config_params = {'start':args.start, 'stop':args.stop, 'numframes2pick':args.numframes2pick}
         
         if self.action == 'create':
             self._run = self._create_project
         elif self.action == 'template':
             self._run = self._use_config_template
+        elif self.action == 'edit':
+            self._run = self._edit_config
         elif self.action == 'extract':
             self._run = self._extract_frames_gui
-        elif self.action == 'add':
-            self._run = self._add_new_video
+        # elif self.action == 'add': #not implemented yet
+        #     self._run = self._add_new_video
         elif self.action == 'label':
             self._run = self._manual_annotation
         elif self.action == 'train':
@@ -116,6 +129,8 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             self._run = self._evaluate_dlc
         elif self.action == 'run':
             self._run = self._run_dlc
+        elif self.action == 'video':
+            self._run = self._labeled_video
         elif self.action == 'verify':
             self._run = self._verify_dlc
         elif self.action == 'outlier':
@@ -176,6 +191,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             for d in self.datatypes:
                 tmp = glob(pjoin(session,d,'*'+self.video_extension))
                 for f in tmp:
+                    print(f)
                     if not self.video_filter is None:
                         if self.video_filter in f:
                             video_path.append(f)
@@ -240,13 +256,75 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             lateral_template_GRB = {'colormap': 'summer', 'bodyparts': ['Nosetip', 'Whisker_1', 'Whisker_2', 'Whisker_3', 'Whisker_4',
                 'Eye_L', 'Eye_R', 'Eye_Up', 'Eye_Down', 'Jaw', 'Ear', 'Hand_L', 'Hand_R', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.55}
             dlc.auxiliaryfunctions.edit_config(configpath, lateral_template_GRB )
+            print('cam0 bodyparts have been added to the config file.')
         elif self.video_filter == 'cam1':
             bottom_template_GRB = {'colormap': 'summer', 'bodyparts': ['Port_L', 'Port_R', 'Nose_TopLeft', 'Nose_TopRight',
             'Nose_BottomLeft', 'Nose_BottomRight', 'Whisker_L', 'Whisker_R', 'MouthEdge_L', 'MouthEdge_R', 'Paw_FrontLeft',
             'Paw_FrontRight', 'Paw_RearLeft', 'Paw_RearRight', 'Tail_Base', 'Tongue'], 'dotsize':5, 'start':0.5, 'stop':0.6}
             dlc.auxiliaryfunctions.edit_config(configpath, bottom_template_GRB)
+            print('cam1 bodyparts have been added to the config file.')
         else:
             print('Specify which camera to use (video_filter).')
+
+    def _edit_config(self):
+        configpath = self.get_project_folder()
+        if not os.path.exists(configpath):
+            print('No project found, create it first.')
+        # import deeplabcut as dlc
+        # dlc.auxiliaryfunctions.edit_config(configpath, self.edit_config_params)
+        # print(f'Config file edited. New parameters for extraction are: {self.edit_config_params}')  
+        import tkinter as tk
+        from tkinter.filedialog import askopenfilename, asksaveasfilename
+        import tkinter.messagebox as messagebox
+
+        def open_file():
+            """Open a file for editing."""
+            filepath = configpath
+            if not filepath:
+                return
+            txt_edit.delete(1.0, tk.END)
+            with open(filepath, "r") as input_file:
+                text = input_file.read()
+                txt_edit.insert(tk.END, text)
+            window.title(f"Editor - {filepath}")
+
+        def save_file():
+            """Save the current file as a new file."""
+            filepath = configpath
+            if not filepath:
+                return
+            with open(filepath, "w") as output_file:
+                text = txt_edit.get(1.0, tk.END)
+                output_file.write(text)
+            window.title(f"Editor - {filepath}")
+            messagebox.showinfo(title="Saved", message="File saved successfully.")
+
+
+        window = tk.Tk()
+        window.rowconfigure(0, minsize=800, weight=1)
+        window.columnconfigure(1, minsize=800, weight=1)
+
+        txt_edit = tk.Text(window)
+        fr_buttons = tk.Frame(window, relief=tk.RAISED, bd=2)
+        btn_save = tk.Button(fr_buttons, text="Save", command=save_file)
+
+        btn_save.grid(row=1, column=0, sticky="ew", padx=5)
+        fr_buttons.grid(row=0, column=0, sticky="ns")
+        txt_edit.grid(row=0, column=1, sticky="nsew")
+
+        # the following lines aren't working yet
+
+        # # Undo and Redo binds for Windows and Linux
+        # txt_edit.bind("<Control-z>", lambda event: txt_edit.edit_undo())
+        # txt_edit.bind("<Control-y>", lambda event: txt_edit.edit_redo())
+
+        # # Undo and Redo binds for Mac
+        # txt_edit.bind("<Command-z>", lambda event: txt_edit.edit_undo())
+        # txt_edit.bind("<Command-Shift-z>", lambda event: txt_edit.edit_redo())
+
+        open_file()
+
+        window.mainloop()
 
     def get_project_videos_path(self):
         self.session_folders = self.get_sessions_folders()
@@ -328,7 +406,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                           autotune=False,
                           displayiters=100,
                           saveiters=15000,
-                          maxiters=300000,
+                          maxiters=self.training_iterations,
                           allow_growth=True)
 
     def _evaluate_dlc(self):
@@ -346,6 +424,10 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             print('No project found, create it first.')
         video_dir = self.get_video_dir()
         data_folder = self.get_data_folder_path()
+        if not bool(data_folder):
+            print('No data file found for the current session (', self.session[0],'). Please analyze the video first.')
+            import sys
+            sys.exit()            
         def extract_outlier_frames(
             config,
             videos,
@@ -509,7 +591,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                                 savelabeled,
                                 copy_videos=copy_videos,
                             ) #there is an error that pops up here mainly due to DLC's add.py function 
-                            #being called here. In the code it can be fixed by modifying the function and
+                            #being called here. In the code it can be fixed by modifying the function an,d
                             #switching "mklink" to "ln -s"
                         else:
                             print(
@@ -523,7 +605,8 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
                         "Or, please double check your video file path"
                     )
     
-        extract_outlier_frames(config = configpath, videos=video_dir, videotype = 'avi', data_folder = data_folder[0]) #should call local function now 1/22 -GRB
+        extract_outlier_frames(config = configpath, videos = self.get_video_path(), videotype = self.video_extension, data_folder = data_folder[0], trainingsetindex = self.training_set, copy_videos=False) 
+        #should call local function now 1/22 -GRB
         #^this is popping up as not defined. maybe I need to define before this line?
         #will investigate 1/25
 
@@ -547,17 +630,30 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             print('No project found, create it first.')
         video_path = self.get_video_path()
         if not len(video_path):
-            print('No video files found.')
+            print('No video files found in.')
             return
         resfolder = self.get_analysis_folder()
         import deeplabcut as dlc
         dlc.analyze_videos(configpath, video_path,
                            videotype=self.video_extension,
                            shuffle=1,
-                           trainingsetindex=self.training_set,
                            save_as_csv=True,
                            destfolder=resfolder,
                            dynamic=(False, .5, 10)) #ask Joao why this was set to True 1/25
+
+    def _labeled_video(self):
+        configpath = self.get_project_folder()
+        if not os.path.exists(configpath):
+            print('No project found, create it first.')
+        video_path = self.get_video_path()
+        resfolder = self.get_analysis_folder()
+        import deeplabcut as dlc
+        dlc.create_labeled_video(configpath, 
+                                video_path, 
+                                videotype=self.video_extension, 
+                                destfolder=resfolder,
+                                trailpoints=self.trailpoints,
+                                overwrite = True)
 
     def _verify_dlc(self):
         configpath = self.get_project_folder()
@@ -565,6 +661,9 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
             print('No project found, create it first.')
         video_path = self.get_video_path()
         data_files = self.get_data_path()
+        # print(data_files)
+        # import sys
+        # sys.exit()
         if not len(video_path):
             print('No video files found.')
             return
@@ -572,7 +671,7 @@ Actions are: create, template, extract, label, train, evaluate, run, verify, out
         from wfield.io import VideoStack
         import numpy as np
         import pandas as pd
-        import sys
+        # import sys
         from vispy import app as vapp
         vapp.use_app()
         from vispy import plot as vp

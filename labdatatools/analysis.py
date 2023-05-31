@@ -70,9 +70,10 @@ class BaseAnalysisPlugin(object):
                         self.subject)))
         return self.sessions_folders
     
-    def process(self,fetch = True, push = True):
+    def process(self,fetch = True, push = True, validate = False):
         '''Run an analysis locally '''
-        self.validate_parameters()
+        if validate: # parameters are validated before in the CLI
+            self.validate_parameters()
         if self.partial_run in ['get','fetch']:
             self.fetch_data()
             return
