@@ -1,3 +1,7 @@
+import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+
 from labdatatools.analysis import *
 import argparse
 
@@ -70,7 +74,10 @@ Joao Couto - May 2022
         
         from spikeinterface.core import (get_global_job_kwargs,
                                          set_global_job_kwargs)
-        job_kwargs = dict(n_jobs=-1, chunk_duration='2s', progress_bar=True)
+        job_kwargs = dict(n_jobs=20,
+                          total_memory='64G',
+                          progress_bar=True,
+                          mp_context="fork")
         set_global_job_kwargs(**job_kwargs)
         
         folders = self.get_sessions_folders()        
@@ -206,7 +213,10 @@ def get_waveforms_and_metrics(sortfolder,
     import spikeinterface.full as si
     from spikeinterface.core import (get_global_job_kwargs,
                                      set_global_job_kwargs)
-    job_kwargs = dict(n_jobs=-1, chunk_duration='2s', progress_bar=True)
+    job_kwargs = dict(n_jobs=20,
+                      total_memory='64G',
+                      progress_bar=True,
+                      mp_context="fork")
     set_global_job_kwargs(**job_kwargs)
     
     if aprecording is None:
@@ -221,9 +231,10 @@ def get_waveforms_and_metrics(sortfolder,
     else:
         rec = aprecording
     sortresults = si.read_sorter_folder(sortfolder)
+    sortresults = sortresults.remove_empty_units()
     if not os.path.exists(pjoin(sortfolder,'waveforms')):
         we = si.extract_waveforms(rec, sortresults, folder=pjoin(sortfolder,'waveforms'),
-                                  mode="folder",num_spikes_for_sparsity=500, method="radius", radius_um=150,
+                                  mode="folder",num_spikes_for_sparsity=100, method="radius", radius_um=150,
                                   sparse=sparse, max_spikes_per_unit = max_spikes_per_unit, 
                                   ms_before=ms_before, ms_after=ms_after,precompute_template=('median',),
                                   **job_kwargs)
@@ -233,10 +244,13 @@ def get_waveforms_and_metrics(sortfolder,
         _ = si.compute_spike_amplitudes(we, **job_kwargs)
         _ = si.compute_template_similarity(we)
         _ = si.compute_spike_locations(we,**job_kwargs)
-        metrics = si.compute_quality_metrics(we, metric_names=['firing_rate', 
-                                                               'presence_ratio',
-                                                               'snr','isi_violation', 
-                                                               'amplitude_cutoff'])
+        metrics = si.compute_quality_metrics(we, metric_names=[['num_spikes',
+                                                                'firing_rate',
+                                                                'snr',
+                                                                'isi_violation',
+                                                                'rp_violation',
+                                                                'amplitude_median',
+                                                                'amplitude_cutoff']])
     else:
         we = si.load_waveforms(pjoin(sortfolder,'waveforms'))
     return we
