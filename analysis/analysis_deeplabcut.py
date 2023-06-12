@@ -53,8 +53,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
                              create labeled VIDEO (overwrites existing video), VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
         parser.add_argument('--training-iterations', action='store', default=300000, type=int, help = "Specify number (integer) of iterations you want the model to train for. Default is 300,000")
-        parser.add_argument('--training-set',
-                            action='store', default=0, type=int, help = "specify which training set index to use for training and evaluating the network's performance (default is 0)")
         parser.add_argument('--label-subject',
                             action='store', default=None, type=str, help = "specity subject used for initial labeling (used when analyzing new videos)")
         parser.add_argument('--label-session',
@@ -89,7 +87,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         self.labeling_subject = args.label_subject
         self.example_config = args.example_config
         self.training_iterations = args.training_iterations
-        self.training_set = args.training_set
         self.trailpoints = args.trailpoints
 
         self.video_filter = args.video_filter
@@ -393,7 +390,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                                     augmenter_type='imgaug')
         dlc.train_network(configpath,
                           shuffle=1,
-                          trainingsetindex=self.training_set,
                           gputouse=None,
                           max_snapshots_to_keep=5,
                           autotune=False,
@@ -584,7 +580,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                                 savelabeled,
                                 copy_videos=copy_videos,
                             ) #there is an error that pops up here mainly due to DLC's add.py function 
-                            #being called here. In the code it can be fixed by modifying the function an,d
+                            #being called here. In the code it can be fixed by modifying the function and
                             #switching "mklink" to "ln -s"
                         else:
                             print(
@@ -627,12 +623,13 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             return
         resfolder = self.get_analysis_folder()
         import deeplabcut as dlc
-        dlc.analyze_videos(configpath, video_path,
+        dlc.analyze_videos(configpath,
+                           video_path,
                            videotype=self.video_extension,
                            shuffle=1,
                            save_as_csv=True,
                            destfolder=resfolder,
-                           dynamic=(False, .5, 10)) #ask Joao why this was set to True 1/25
+                           allow_growth=True)
 
     def _labeled_video(self):
         configpath = self.get_project_folder()
@@ -642,11 +639,10 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         resfolder = self.get_analysis_folder()
         import deeplabcut as dlc
         dlc.create_labeled_video(configpath, 
-                                video_path, 
-                                videotype=self.video_extension, 
-                                destfolder=resfolder,
-                                trailpoints=self.trailpoints,
-                                overwrite = True)
+                                 video_path, 
+                                 videotype=self.video_extension, 
+                                 destfolder=resfolder,
+                                 trailpoints=self.trailpoints)
 
     def _verify_dlc(self):
         configpath = self.get_project_folder()
@@ -707,7 +703,17 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
 
         # load video and data
         mov = VideoStack([video_path[0]], outputdict={'-pix_fmt':'gray'})
-        dlc_coords = pd.read_hdf(data_files[0])
+
+        from pprint import pprint
+        import inquirer
+        question = [inquirer.List("file",
+                message="What data file do you want to view?",
+                choices=[*data_files],
+            ),
+        ]
+
+        data = inquirer.prompt(question)
+        dlc_coords = pd.read_hdf(data['file'])
         bpts = dlc_coords.columns.get_level_values("bodyparts")
         all_bpts = bpts.values[::3]
         dlc_coords_x, dlc_coords_y, dlc_coords_likelihood = dlc_coords.values.reshape((len(dlc_coords), -1, 3)).T
@@ -742,23 +748,15 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             plot.title.text = str(v)
 
         # plot and show data on vispy widget
-        pl = plot.plot(data=np.vstack([x,y]).T,symbol='o',marker_size=3,width = 0,face_color='k',edge_color='k')
+        n_points = len(x)
+        np.random.seed(0)
+        colors = np.random.uniform(size=(n_points, 4))
+
+        pl = plot.plot(data=np.vstack([x,y]).T,symbol='o',marker_size=3,width = 0,face_color=colors,edge_color=colors)
         im = plot.image(frame, cmap="gray")
 
         plot.camera.set_range((mov.shape[2],0), (mov.shape[3],0)) # flip upside down video
-        #cb = plot.colorbar(position="bottom",
-        #                   label="frame",
-        #                   clim=("0", str(len(mov))),
-        #                   cmap="gray",
-        #                   border_width=1,
-        #                   border_color="#aeaeae")
-        #print('Done.')
-        # opens slider window
-        #app = QApplication(sys.argv)
-        #sliderwindow = DLCvideomaker()
-        #sliderwindow.show()
-        #vapp.run(allow_interactive = True)
-        #sliderwindow.grid.addWidget(fig.scene.canvas,0,1)
+
         @fig.connect
         def on_key_press(event, val = val):
             if event.key == 'Left':
