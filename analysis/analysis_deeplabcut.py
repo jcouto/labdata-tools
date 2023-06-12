@@ -188,7 +188,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             for d in self.datatypes:
                 tmp = glob(pjoin(session,d,'*'+self.video_extension))
                 for f in tmp:
-                    print(f)
                     if not self.video_filter is None:
                         if self.video_filter in f:
                             video_path.append(f)
@@ -657,9 +656,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             print('No project found, create it first.')
         video_path = self.get_video_path()
         data_files = self.get_data_path()
-        # print(data_files)
-        # import sys
-        # sys.exit()
         if not len(video_path):
             print('No video files found.')
             return
@@ -667,7 +663,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         from wfield.io import VideoStack
         import numpy as np
         import pandas as pd
-        # import sys
         from vispy import app as vapp
         vapp.use_app()
         from vispy import plot as vp
@@ -710,8 +705,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
 
         # load video and data
         mov = VideoStack([video_path[0]], outputdict={'-pix_fmt':'gray'})
-
-        from pprint import pprint
         import inquirer
         question = [inquirer.List("file",
                 message="What data file do you want to view?",
@@ -757,7 +750,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         # plot and show data on vispy widget
         n_points = len(x)
         np.random.seed(0)
-        colors = np.random.uniform(size=(n_points, 4))
+        colors = np.random.uniform(size=(n_points, 3))
 
         pl = plot.plot(data=np.vstack([x,y]).T,symbol='o',marker_size=3,width = 0,face_color=colors,edge_color=colors)
         im = plot.image(frame, cmap="gray")
@@ -780,7 +773,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                 set_data(val[0])
         fig.show()
         vapp.run()
-        #sys.exit(app.exec_())
 
     def validate_parameters(self):
         if len(self.subject)>1:
