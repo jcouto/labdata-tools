@@ -1,18 +1,20 @@
-from labdatatools import BaseAnalysisPlugin
+from labdatatools.analysis import *
 import argparse
-from glob import glob
-from os.path import join as pjoin
-import os
 
 class AnalysisWfield(BaseAnalysisPlugin):
     def __init__(self,subject,
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = [''],
+                 excludes = default_excludes,
                  bwlimit = None,
                  overwrite = False,
                  **kwargs):
+        '''
+labdatatools wrapper for running wfield pre-processing.
+
+Joao Couto - 2021
+        '''
         super(AnalysisWfield,self).__init__(
             subject = subject,
             session = session,
@@ -22,6 +24,7 @@ class AnalysisWfield(BaseAnalysisPlugin):
             bwlimit = bwlimit,
             overwrite = overwrite,
             **kwargs)
+        
         self.name = 'wfield'
         self.datatypes = ['one_photon']
         if not datatypes == ['']:

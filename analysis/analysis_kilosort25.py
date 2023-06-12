@@ -1,18 +1,19 @@
-from labdatatools import *
+from labdatatools.analysis import *
 import argparse
-from glob import glob
-from os.path import join as pjoin
-import os
 
 class AnalysisKilosort25(BaseAnalysisPlugin):
     def __init__(self,subject,
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = ['.phy'],
+                 excludes = default_excludes,
                  bwlimit = None,
                  overwrite = False,
                  **kwargs):
+        '''
+labdatatools wrapper for running kilosort 2.5.
+Joao Couto - 2021
+        '''
         super(AnalysisKilosort25,self).__init__(
             subject = subject,
             session = session,
@@ -251,8 +252,8 @@ def read_spikeglx_meta(metafile):
     meta['sRateHz'] = meta[meta['typeThis'][:2]+'SampRate']
     try:
         parse_coords_from_spikeglx_metadata(meta)
-    except:
-        pass
+    except Exception as err:
+        print(err)
     return meta
 
 def parse_coords_from_spikeglx_metadata(meta,shanksep = 250):
@@ -271,7 +272,10 @@ def parse_coords_from_spikeglx_metadata(meta,shanksep = 250):
     chans = imro[:,0]
     banks = imro[:,1]
     shank = np.zeros(imro.shape[0])
-    connected = np.stack([[int(i) for i in m.split(':')] for m in meta['snsShankMap'][1:]])[:,3]
+    if 'snsShankMap' in meta.keys():
+        connected = np.stack([[int(i) for i in m.split(':')] for m in meta['snsShankMap'][1:]])[:,3]
+    else:
+        connected = np.stack([[int(i) for i in m.split(':')] for m in meta['snsGeomMap'][1:]])[:,3] # recent spikeglx
     if (probetype <= 1) or (probetype == 1100) or (probetype == 1300):
         # <=1 3A/B probe
         # 1100 UHD probe with one bank

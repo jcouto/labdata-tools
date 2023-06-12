@@ -60,7 +60,7 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
         parser.add_argument('--mesoscope',action='store_true',default = False)
         parser.add_argument('--file-filter',
                             action='store', default=None, type=str)
-        parser.add_argument('--open-result', action='store_true',default = False)
+        parser.add_argument('--open-result','--open','--gui', action='store_true',default = False)
 
         args = parser.parse_args(arguments[1:])
         
@@ -121,11 +121,6 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
         if not self.nonrigid is None:
             ops['nonrigid'] = self.nonrigid
         self.session_folders = self.get_sessions_folders()
-        if len(self.session_folders)>1:
-            self.isconcatenated = True
-            print('''Multisession merge is not implemented.
-            Using the first session.''')
-        print(self.session_folders)
         db = dict(data_path = [pjoin(f,self.input_folder) for f in self.session_folders],
                   save_path0 = self.session_folders[0])
         # Search for SBX files
@@ -149,6 +144,27 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
             ops['aspect'] = sbxmeta['um_per_pixel_x']/sbxmeta['um_per_pixel_y']
             ops['um_per_pixel_x'] = sbxmeta['um_per_pixel_x']
             ops['um_per_pixel_y'] = sbxmeta['um_per_pixel_y']
+
+        if self.is_multisession:
+            if not len(files):
+                raise(OSError('Multisession mode is only tested for SBX files.'))
+            else:
+                session_meta = []
+                onset = 0
+                for isession,f in enumerate(files):
+                    from sbxreader import sbx_memmap
+                    d = sbx_memmap(f)
+                    session_meta.append(dict(filename = f,
+                                             session = self.session[isession],
+                                             frame_onset = onset,
+                                             frame_size = d.shape))
+                    onset += d.shape[0]
+                    del d
+                savepath = pjoin(db['save_path0'],self.output_folder)
+                if not os.path.exists(savepath):
+                    os.makedirs(savepath)
+                with open(pjoin(savepath,'multisession_metadata.json'),'w') as fd:
+                    json.dump(session_meta,fd,indent=2)
         if not len(files):
             # then it must be tiff
             files = []
@@ -175,7 +191,7 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
 
         if len(self.session)>1:
             self.is_multisession = True
-            raise(OSError('Segmenting multiple sessions needs to be implemented.'))
+            print('Segmenting {0} sessions. The results will go to the first session.'.format(len(self.session),self.session[0]))
         
         # Suite2p parameters are validated before running, to avoid downloading because we need the data files.
 
