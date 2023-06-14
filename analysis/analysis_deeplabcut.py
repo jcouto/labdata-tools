@@ -119,7 +119,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         # elif self.action == 'add': #not implemented yet
         #     self._run = self._add_new_video
         elif self.action == 'label':
-            self._run = self._manual_annotation
+            self._run = self._label_frames
         elif self.action == 'train':
             self._run = self._train_dlc
         elif self.action == 'evaluate':
@@ -378,7 +378,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                            **self.extractparams)
             self.overwrite = True
 
-    def _manual_annotation(self):
+    def _label_frames(self):
         configpath = self.get_project_folder()
         if not os.path.exists(configpath):
             print('No project found, create it first.')
