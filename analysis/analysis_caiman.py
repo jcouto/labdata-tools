@@ -145,7 +145,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         #Save a caiman parameters file
         output_folder = os.path.join(session_folder[0], self.name) #Set path directory to caiman folder
-        self.output_folder = output_folder #Set the upload folder to the caiman directory
+        self.output_folder = self.name #Here this means the datatype folder only
+        
         if not os.path.exists(output_folder):
             os.mkdir(output_folder)
         with open(pjoin(output_folder, 'caiman_params.json'),'w') as fd:
@@ -161,7 +162,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         session_folder = self.get_sessions_folders() #Go thorugh the folders
         fnames = sorted(glob(os.path.join(session_folder[0], self.datatypes[0], '*.avi'))) #These are the complete video paths
         output_folder = pjoin(session_folder[0], self.name) #Set path directory to caiman folder
-        self.output_folder = output_folder
+        self.output_folder = self.name #Here this means the datatype folder only
         if not os.path.exists(output_folder):
             os.mkdir(output_folder)
 
@@ -286,7 +287,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #Save the Shift Data from Motion Correction:
         rigid_shifts = np.array(mc.shifts_rig) # Retrieve shifts from mc object
         output_folder = pjoin(session_folder[0], self.name) #Set path directory to same location as data
-        self.output_folder = output_folder
+        self.output_folder = self.name #Here this means the datatype folder only
         if not os.path.exists(output_folder):
             os.mkdir(output_folder)
 
@@ -315,7 +316,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #File Selection:
         session_folder = self.get_sessions_folders() #Go thorugh the folders
         output_folder = pjoin(session_folder[0], self.name) #Set output path directory to same location as data
-        self.output_folder = output_folder
+        self.output_folder = self.name #Here this means the datatype folder only
         
         #Load and initialize parameters
         caiman_params = self.load_caiman_params()
@@ -361,7 +362,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #Get the respective session folder
         session_folder = self.get_sessions_folders() #Go thorugh the folders
         output_folder = pjoin(session_folder[0], self.name) #Set output path directory to same location as data
-        self.output_folder = output_folder #Set the upload directory 
+        self.output_folder = self.name #Here this means the datatype folder only
 
         #Load and initialize parameters
         caiman_params = self.load_caiman_params()
@@ -788,7 +789,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         #Now process the data   
         session_folder = self.get_sessions_folders() #Go thorugh the folders
         output_folder = pjoin(session_folder[0], self.name) #Set output path directory to same location as data
-        self.output_folder = output_folder #Set the upload path to be the caiman directory
+        self.output_folder = self.name #Here this means the datatype folder only
         caiman_obj = load_CNMF(pjoin(output_folder, 'uncurated_caiman_results.hdf5'))
             
         #Run the GUI
