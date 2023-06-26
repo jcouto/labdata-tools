@@ -380,10 +380,14 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
 
     def _label_frames(self):
         configpath = self.get_project_folder()
+        project_folder = configpath.replace('/config.yaml', '')
         if not os.path.exists(configpath):
             print('No project found, create it first.')
-        import deeplabcut as dlc
-        dlc.label_frames(configpath)
+        labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'))[0]
+        from deeplabcut.gui.widgets import launch_napari
+        import napari
+        viewer = launch_napari([labeled_data_folder, configpath])
+        napari.run()
         self.overwrite = True
 
     def _train_dlc(self):
