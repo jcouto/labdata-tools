@@ -54,7 +54,12 @@ def clean_local_files(subject = None,
                     to_keep.append(localfiles[localfiles.localfolder == f.localfolder])
                     print(out)
         else:
-            remotefiles = rclone_list_files(s.subject) 
+            try:
+                remotefiles = rclone_list_files(s.subject)
+            except:
+                print('Subject [{0}] not on the remote.'.format(s.subject),
+                      flush=True)
+                continue
             for j,l in localfiles.iterrows():
                 r = remotefiles[remotefiles.filepath == l.serverpath]
                 if r.shape[0]>0:
