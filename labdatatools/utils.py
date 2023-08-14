@@ -15,10 +15,14 @@ LABDATA_FILE= pjoin(os.path.expanduser('~'),'labdatatools','preferences.json')
 
 default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                'path_format':'{subject}/{session}/{datatype}',
-                               'remote_queue': dict(remote='hoffman2.idre.ucla.edu',
-                                                    user='username'),
+                               'remote_queue': None,
+                               #'remote_queue': dict(remote='hoffman2.idre.ucla.edu',
+                               #                     user='username'),
                                'rclone' : dict(drive = 'churchland_data',
                                                folder = 'data'),
+                               'archives': None,
+                               #'archives': [dict(drive = 'globus_shared',
+                               #                         folder = 'data')],
                                'plugins_folder':pjoin(os.path.expanduser('~'),
                                                       'labdatatools','analysis')}
 
@@ -179,7 +183,17 @@ def get_labdata_preferences(prefpath = None):
         pref = json.load(infile)
     for k in default_labdata_preferences:
         if not k in pref.keys():
-            pref[k] = default_labdata_preferences[k] 
+            pref[k] = default_labdata_preferences[k]
+    if 'archives' in pref.keys():
+        if not pref['archives'] is None:
+            for iarchive in range(len(pref['archives'])):
+                filename = pjoin(preffolder,'archive_list_{drive}_{folder}.xlsx'.format(**pref['archives'][iarchive]))
+                pref['archives'][iarchive]['file_list'] = filename
+                print(filename)
+                if not os.path.exists(filename):
+                    print('No list for archive [{0}], fetching list of all files.'.format(pref['archives'][iarchive]['drive']))
+                    print('... this will take a while...',flush=True)
+            
     return pref
 
 labdata_preferences = get_labdata_preferences()
