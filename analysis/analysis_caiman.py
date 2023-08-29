@@ -141,7 +141,10 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         miniscope_metadata_file = pjoin(session_folder[0], self.datatypes[0], 'metaData.json')
         with open(miniscope_metadata_file, 'r') as f:
             miniscope_metadata = json.load(f)
-        caiman_params['motion_correction_params']['fr'] = miniscope_metadata['frameRate']
+        fr = miniscope_metadata['frameRate']
+        if isinstance(fr,str): #Sometimes the format comes up as a string of type "20FPS"
+            fr = int(fr[:-3]) #Remove "FPS" from string and convert to integer
+        caiman_params['motion_correction_params']['fr'] = fr
 
         #Save a caiman parameters file
         output_folder = os.path.join(session_folder[0], self.name) #Set path directory to caiman folder
@@ -379,14 +382,15 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                                                          n_processes = self.n_processes,  
                                                          single_thread = False)
         
-
+        print(f'Images file name is: {images.filename}')
        # Run CNMF-E on Patches:
         cnmfe_start_time = time()
 
         cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, Ain = caiman_params['cnmfe_params']['Ain'], params=opts)
         cnm.fit(images)
+        print(f'cnm mmap file is: {cnm.mmap_file}')
         cnm.estimates.detrend_df_f() #Detrend the fluorescence traces
-
+        print(f'cnm mmap file stil is: {cnm.mmap_file}')
         #Display elapsed time for CNMFE step
         cnmfe_end_time = time()
         print(f"Ran Initialization and Fit CNMFE Model in: {round(cnmfe_end_time - cnmfe_start_time)} s.")
