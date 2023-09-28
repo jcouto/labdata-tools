@@ -33,6 +33,7 @@ default_excludes = ['**.phy**',                # skip .phy folders
                     '**._.DS_Store**',
                     '**.DS_Store**',
                     '**dummy**',
+                    '**filtered_recording.ap.bin', # filtered recording from spks sorting
                     '**FakeSubject**']
 
 def list_subjects():
@@ -184,17 +185,8 @@ def get_labdata_preferences(prefpath = None):
     for k in default_labdata_preferences:
         if not k in pref.keys():
             pref[k] = default_labdata_preferences[k]
-    if 'archives' in pref.keys():
-        if not pref['archives'] is None:
-            for iarchive in range(len(pref['archives'])):
-                filename = pjoin(preffolder,'archive_list_{drive}_{folder}.xlsx'.format(**pref['archives'][iarchive]))
-                pref['archives'][iarchive]['file_list'] = filename
-                print(filename)
-                if not os.path.exists(filename):
-                    print('No list for archive [{0}], fetching list of all files.'.format(pref['archives'][iarchive]['drive']))
-                    print('... this will take a while...',flush=True)
-            
     return pref
 
 labdata_preferences = get_labdata_preferences()
+
 

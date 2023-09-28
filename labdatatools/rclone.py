@@ -4,6 +4,29 @@ from subprocess import check_output,Popen,PIPE,STDOUT
 from .utils import *
 from tqdm import tqdm
 
+def get_archived_list(pref = labdata_preferences):
+
+    preffolder = os.path.dirname(LABDATA_FILE)
+    archived_files = []
+    if 'archives' in pref.keys():
+        if not pref['archives'] is None:
+            for iarchive in range(len(pref['archives'])):
+                filename = pjoin(preffolder,'archive_list_{drive}_{folder}.xlsx'.format(**pref['archives'][iarchive]))
+                pref['archives'][iarchive]['file_list'] = filename
+                if not os.path.exists(filename):
+                    print('No list for archive [{0}], fetching list of all files.'.format(pref['archives'][iarchive]['drive']))
+                    print('... this will take a while...',flush=True)
+                    from .rclone import rclone_list_files
+                    files = rclone_list_files(remote = pref['archives'][iarchive])
+                    print('Saving to: {0}'.format(filename),flush=True)
+                    files.to_excel(filename)
+                else:
+                    files = pd.read_excel(filename)
+                archived_files.append(files)
+    if len(archived_files):
+        return pd.concat(archived_files)
+    else: return None
+    
 def rclone_list_subjects(remote = None):
     '''
     Lists the subjects on the google drive
@@ -189,8 +212,10 @@ def rclone_upload_data(subject='',
                        bwlimit = None,
                        excludes = default_excludes,
                        overwrite = False,
+                       add_pacer_options = True,
                        remote = None):
     # this needs a pipe
+    
     localpath = labdata_preferences['paths'][path_idx]
     if len(subject):
         localpath = pjoin(localpath,subject)
@@ -203,12 +228,16 @@ def rclone_upload_data(subject='',
         if not datatype is None:  # needs a session
             localpath = pjoin(localpath,datatype)
             remotepath += '/'+datatype
+
+    # check that the files are not already on an archive first.
     if remote is None:
         remote = labdata_preferences['rclone']
     command = 'rclone copy --progress {path} {drive}:{folder}{remote}'.format(
         remote=remotepath,
         path = localpath,
         **remote)
+    if add_pacer_options:
+        command += ' --drive-pacer-min-sleep 10ms --drive-pacer-burst 1000'
     if not bwlimit is None:
         command += ' --bwlimit {0}M'.format(bwlimit)
     if not overwrite:
