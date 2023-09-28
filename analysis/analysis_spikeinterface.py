@@ -53,9 +53,9 @@ Joao Couto - May 2022
         parser.add_argument('--no-sorting',
                             action='store_true', default=False,
                             help = "Skip spike sorting")
-        parser.add_argument('--no-waveforms',
+        parser.add_argument('--waveforms',
                             action='store_true', default=False,
-                            help = "Skip the waveform communication.")
+                            help = "Skip the waveform computation.")
         parser.add_argument('--no-syncs',
                             action='store_true', default=False,
                             help = "Skip probe syncs")
@@ -65,7 +65,7 @@ Joao Couto - May 2022
         self.probe = args.probe
         self.no_noise = args.no_noise
         self.no_sorting = args.no_sorting
-        self.no_waveforms = args.no_waveforms
+        self.waveforms = args.waveforms
         self.no_syncs = args.no_syncs
 
     def _run(self):
@@ -74,10 +74,8 @@ Joao Couto - May 2022
         
         from spikeinterface.core import (get_global_job_kwargs,
                                          set_global_job_kwargs)
-        job_kwargs = dict(n_jobs=20,
-                          total_memory='64G',
-                          progress_bar=True,
-                          mp_context="fork")
+        job_kwargs = dict(n_jobs=4,
+                          progress_bar=True)
         set_global_job_kwargs(**job_kwargs)
         
         folders = self.get_sessions_folders()        
@@ -130,7 +128,7 @@ Joao Couto - May 2022
                         ss.run_kilosort2_5(recording = rec,
                                            output_folder=outfolder,
                                            docker_image=True)
-                    if not self.no_waveforms:
+                    if self.waveforms:
                         print(f'Running waveforms and metrics on {outfolder}') 
                         we = get_waveforms_and_metrics(outfolder,aprecording = rec, apfile=apinfile)
                         try:
@@ -213,10 +211,8 @@ def get_waveforms_and_metrics(sortfolder,
     import spikeinterface.full as si
     from spikeinterface.core import (get_global_job_kwargs,
                                      set_global_job_kwargs)
-    job_kwargs = dict(n_jobs=20,
-                      total_memory='64G',
-                      progress_bar=True,
-                      mp_context="fork")
+    job_kwargs = dict(n_jobs=4,
+                      progress_bar=True)
     set_global_job_kwargs(**job_kwargs)
     
     if aprecording is None:

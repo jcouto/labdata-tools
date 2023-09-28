@@ -5,8 +5,10 @@ def clean_local_files(subject = None,
                       checksum = True,
                       dry_run = False,
                       keep_recent_weeks = 5,
-                      exceptions = ['Session Settings','Session Data']):
+                      exceptions = ['Session Settings',
+                                    'Session Data'] + default_excludes):
     from tqdm import tqdm  # make this optional
+
     to_delete = []
     to_keep = []
     subjects = list_subjects()
@@ -96,8 +98,11 @@ def clean_local_files(subject = None,
     deleted = []
     for i in tqdm(deleteidx):
         if not dry_run:
-            os.remove(to_delete.iloc[i].filepath)
-        deleted.append(to_delete.iloc[i])
+            try:
+                os.remove(to_delete.iloc[i].filepath)
+                deleted.append(to_delete.iloc[i])
+            except Exception as err:
+                print(err)
     if len(deleted):
         print('Deleted {0} local files.'.format(len(deleted)))
     deleted = pd.DataFrame(deleted)

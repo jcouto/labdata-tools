@@ -25,7 +25,7 @@ class BaseAnalysisPlugin(object):
                  session = [''],
                  datatypes = [''],
                  includes = [''],
-                 excludes = [''],
+                 excludes = default_excludes,
                  bwlimit = None,
                  overwrite = False,
                  upload = True,
