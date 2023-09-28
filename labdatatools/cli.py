@@ -6,15 +6,6 @@ from .slurm import has_slurm
 from .uge import has_uge
 from .remote import *
 
-default_excludes = ['**.phy**',                # skip .phy folders
-                    '**kilosort**temp_wh.dat', # skip kilosort temp_wh files
-                    '**suite2p**data.bin',     # skip suite2p corrected files
-                    '**.ipynb_checkpoints**',
-                    '**._.DS_Store**',
-                    '**.DS_Store**',
-                    '**dummy**',
-                    '**FakeSubject**']
-
 class CLI_parser(object):
     def __init__(self):
         parser = argparse.ArgumentParser(
@@ -317,8 +308,12 @@ The commands are:
                                     excludes = args.excludes)
     def clean_local(self):
         parser = argparse.ArgumentParser(
-            description = 'fetch data from the database',
-            usage = 'labdata clean_local --subject <SUBJECT> --no-checksum --keep-recent-weeks 5 --dry-run')
+            description = 'Clean data from the local disk (careful, this deletes data).',
+            usage = '''labdata clean_local --subject <SUBJECT> --no-checksum --keep-recent-weeks 5 --dry-run
+
+Examples:
+            Clean all data for all animals that have "JC" in the name:  labdata clean_local -s "JC*"
+''')
 
         # todo: add stuff to select only some animals
         parser.add_argument('-s','--subject', action='store', default=None, type=str)

@@ -15,12 +15,26 @@ LABDATA_FILE= pjoin(os.path.expanduser('~'),'labdatatools','preferences.json')
 
 default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                'path_format':'{subject}/{session}/{datatype}',
-                               'remote_queue': dict(remote='hoffman2.idre.ucla.edu',
-                                                    user='mmelin'),
+                               'remote_queue': None,
+                               #'remote_queue': dict(remote='hoffman2.idre.ucla.edu',
+                               #                     user='username'),
                                'rclone' : dict(drive = 'churchland_data',
                                                folder = 'data'),
+                               'archives': None,
+                               #'archives': [dict(drive = 'globus_shared',
+                               #                         folder = 'data')],
                                'plugins_folder':pjoin(os.path.expanduser('~'),
                                                       'labdatatools','analysis')}
+
+default_excludes = ['**.phy**',                # skip .phy folders
+                    '**temp_wh.dat',           # skip kilosort temp_wh files
+                    '**suite2p**data.bin',     # skip suite2p corrected files
+                    '**.ipynb_checkpoints**',
+                    '**._.DS_Store**',
+                    '**.DS_Store**',
+                    '**dummy**',
+                    '**filtered_recording.ap.bin', # filtered recording from spks sorting
+                    '**FakeSubject**']
 
 def list_subjects():
     '''
@@ -126,6 +140,7 @@ def get_filepath(subject,
         files = files[0]
     if not len(files):
         files = None
+    # If the file is not there return None but if fetch is TRUE go to the rclone to get it
     if fetch and files is None:
         print('Could not find file, trying to get it from the cloud')
         from .rclone import rclone_get_data
@@ -133,12 +148,16 @@ def get_filepath(subject,
                         session = session,
                         datatype = subfolders[0],
                         includes = [filename+extension])
-        files = get_filepath(datapath,
-                             subject,
-                             session,
-                             subfolders,
-                             filename,
-                             extension)
+        # do the rclone stuff only once (if recursive it would just keep doing it)
+        files = glob(pjoin(datapath,
+                           subject,
+                           session,
+                           pjoin(*subfolders),
+                           filename+extension))
+        if len(files) == 1:
+            files = files[0]
+        if not len(files):
+            files = None # return None if the file is not on the rclone nor in the local folder
     return files
 
 def get_labdata_preferences(prefpath = None):
@@ -165,8 +184,9 @@ def get_labdata_preferences(prefpath = None):
         pref = json.load(infile)
     for k in default_labdata_preferences:
         if not k in pref.keys():
-            pref[k] = default_labdata_preferences[k] 
+            pref[k] = default_labdata_preferences[k]
     return pref
 
 labdata_preferences = get_labdata_preferences()
+
 

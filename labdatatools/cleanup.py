@@ -1,15 +1,31 @@
 from .utils import *
 from .rclone import rclone_list_files
 
-def clean_local_files(subject = None, checksum = True, dry_run = False, keep_recent_weeks = 5,
-                      exceptions = ['Session Settings','Session Data']):
+def clean_local_files(subject = None,
+                      checksum = True,
+                      dry_run = False,
+                      keep_recent_weeks = 5,
+                      exceptions = ['Session Settings',
+                                    'Session Data'] + default_excludes):
     from tqdm import tqdm  # make this optional
+
     to_delete = []
     to_keep = []
     subjects = list_subjects()
     if not subject is None:
-        subjects = subjects[subjects.subject == subject]
+        if '*' in subject:
+            # then get all subjects that qualify
+            k = subject.replace('*','')
+            subjects = [s for i,s in subjects.iterrows() if k in s.subject]
+            if len(subjects):
+                subjects = pd.DataFrame(subjects)
+            else:
+                print("No local subject fit the key: {0}".format(subject))
+        else:
+            subjects = subjects[subjects.subject == subject]
+
     for i,s in subjects.iterrows():
+        print('Cleaning data for {0}'.format(s.subject))
         localfiles = list_files(s.subject)
         if not len(localfiles):
             continue
@@ -40,7 +56,12 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
                     to_keep.append(localfiles[localfiles.localfolder == f.localfolder])
                     print(out)
         else:
-            remotefiles = rclone_list_files(s.subject) 
+            try:
+                remotefiles = rclone_list_files(s.subject)
+            except:
+                print('Subject [{0}] not on the remote.'.format(s.subject),
+                      flush=True)
+                continue
             for j,l in localfiles.iterrows():
                 r = remotefiles[remotefiles.filepath == l.serverpath]
                 if r.shape[0]>0:
@@ -77,8 +98,11 @@ def clean_local_files(subject = None, checksum = True, dry_run = False, keep_rec
     deleted = []
     for i in tqdm(deleteidx):
         if not dry_run:
-            os.remove(to_delete.iloc[i].filepath)
-        deleted.append(to_delete.iloc[i])
+            try:
+                os.remove(to_delete.iloc[i].filepath)
+                deleted.append(to_delete.iloc[i])
+            except Exception as err:
+                print(err)
     if len(deleted):
         print('Deleted {0} local files.'.format(len(deleted)))
     deleted = pd.DataFrame(deleted)

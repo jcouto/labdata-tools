@@ -4,13 +4,39 @@ from subprocess import check_output,Popen,PIPE,STDOUT
 from .utils import *
 from tqdm import tqdm
 
-def rclone_list_subjects():
+def get_archived_list(pref = labdata_preferences):
+
+    preffolder = os.path.dirname(LABDATA_FILE)
+    archived_files = []
+    if 'archives' in pref.keys():
+        if not pref['archives'] is None:
+            for iarchive in range(len(pref['archives'])):
+                filename = pjoin(preffolder,'archive_list_{drive}_{folder}.xlsx'.format(**pref['archives'][iarchive]))
+                pref['archives'][iarchive]['file_list'] = filename
+                if not os.path.exists(filename):
+                    print('No list for archive [{0}], fetching list of all files.'.format(pref['archives'][iarchive]['drive']))
+                    print('... this will take a while...',flush=True)
+                    from .rclone import rclone_list_files
+                    files = rclone_list_files(remote = pref['archives'][iarchive])
+                    print('Saving to: {0}'.format(filename),flush=True)
+                    files.to_excel(filename)
+                else:
+                    files = pd.read_excel(filename)
+                archived_files.append(files)
+    if len(archived_files):
+        return pd.concat(archived_files)
+    else: return None
+    
+def rclone_list_subjects(remote = None):
     '''
     Lists the subjects on the google drive
-    Returns a pandas dataframe with the kist of subjects if the subjects are 
+    Returns a pandas dataframe with the list of subjects if the subjects are 
 the first level of the folder hierarchy.
     '''
-    out = check_output('rclone lsd {drive}:{folder}'.format(**labdata_preferences['rclone']).split(' ')).decode("utf-8")
+
+    if remote is None:
+        remote = labdata_preferences['rclone']
+    out = check_output('rclone lsd {drive}:{folder}'.format(**remote).split(' ')).decode("utf-8")
     out = out.splitlines()
     subjects = [o.split(' ')[-1] for o in out]
     if len(subjects):
@@ -18,10 +44,12 @@ the first level of the folder hierarchy.
     else:
         return None
     
-def rclone_list_sessions(subject):
+def rclone_list_sessions(subject,remote = None):
+    if remote is None:
+        remote = labdata_preferences['rclone']
     out = check_output(
         'rclone lsd {drive}:{folder}/{subject}'.format(
-            **labdata_preferences['rclone'],
+            **remote,
             subject = subject).split(' ')).decode("utf-8")
     out = out.splitlines()
     sessions = [o.split(' ')[-1] for o in out]
@@ -32,20 +60,23 @@ def rclone_list_sessions(subject):
 
 def rclone_list_files(subject = '', filters = [],
                       includes = [],
-                      excludes = []):
+                      excludes = [],
+                      remote = None):
     '''
     Gets a list of all files in the remote.
     Specify a subject to get only the first level.
     '''
+    if remote is None:
+        remote  = labdata_preferences['rclone']
     cmd = 'rclone ls {drive}:{folder}/{subject}'.format(
         subject=subject,
-        **labdata_preferences['rclone'])
+        **remote)
     if len(includes):
         for i in includes:
-            cmd += " --include '{0}'".format(i)
+            cmd += ' --include "{0}"'.format(i)
     if len(excludes):
         for i in excludes:
-            cmd += " --exclude '{0}'".format(i)
+            cmd += ' --exclude "{0}"'.format(i)
 
     #print(cmd,flush=True)
     out = check_output(cmd.split(' ')).decode("utf-8")
@@ -97,6 +128,7 @@ def rclone_get_data(path_format = None,
                     ipath = 0,
                     overwrite = False,
                     verbose = True,
+                    remote = None,
                     **kwargs):
     '''
     Fetch data from the data server.
@@ -109,7 +141,9 @@ Note:
         path_format = labdata_preferences['path_format']
 
     fmts = path_format.split('/')
-    keys = dict(labdata_preferences['rclone'],
+    if remote is None:
+        remote = labdata_preferences['rclone'] 
+    keys = dict(remote,
                 path = labdata_preferences['paths'][ipath],
                 **kwargs)
     for fmt in fmts:
@@ -126,13 +160,22 @@ Note:
     local_path = pjoin('{path}',*fmts)  # build local path, so it is OS independent
     keys['drive_path'] = '/'.join(fmts).format(**keys)
     keys['local_path'] = local_path.format(**keys)
-    cmd = 'rclone copy --progress {drive}:{folder}/{drive_path} {local_path}'.format(**keys)
+    if '*' in keys['local_path']:
+        # then add it to the includes instead
+        toinclude = os.path.basename(keys['local_path'])
+        if not '*' in toinclude:
+            raise(ValueError("Can only add the wildkey to the last folder name" + keys['local_path']))
+        keys['local_path'] = os.path.dirname(os.path.abspath(keys['local_path']))
+        keys['drive_path'] = os.path.dirname(keys['drive_path'])
+        includes.append(toinclude)
+    cmd = 'rclone copy --progress {drive}:{folder}/{drive_path} {local_path}'.format(
+        **keys)
     if len(includes):
         for i in includes:
-            cmd += " --include '{0}'".format(i)
+            cmd += ' --include "{0}"'.format(i)
     if len(excludes):
         for i in excludes:
-            cmd += " --exclude '{0}'".format(i)
+            cmd += ' --exclude "{0}"'.format(i)
     if not overwrite:
         cmd += ' --ignore-existing'
     if verbose:
@@ -167,9 +210,12 @@ def rclone_upload_data(subject='',
                        datatype = None,
                        path_idx = 0,
                        bwlimit = None,
-                       excludes = ['**dummy**','**FakeSubject**','**.phy**'],
-                       overwrite = False):
+                       excludes = default_excludes,
+                       overwrite = False,
+                       add_pacer_options = True,
+                       remote = None):
     # this needs a pipe
+    
     localpath = labdata_preferences['paths'][path_idx]
     if len(subject):
         localpath = pjoin(localpath,subject)
@@ -182,18 +228,23 @@ def rclone_upload_data(subject='',
         if not datatype is None:  # needs a session
             localpath = pjoin(localpath,datatype)
             remotepath += '/'+datatype
-        
+
+    # check that the files are not already on an archive first.
+    if remote is None:
+        remote = labdata_preferences['rclone']
     command = 'rclone copy --progress {path} {drive}:{folder}{remote}'.format(
         remote=remotepath,
         path = localpath,
-        **labdata_preferences['rclone'])
+        **remote)
+    if add_pacer_options:
+        command += ' --drive-pacer-min-sleep 10ms --drive-pacer-burst 1000'
     if not bwlimit is None:
         command += ' --bwlimit {0}M'.format(bwlimit)
     if not overwrite:
         command += ' --ignore-existing'
     if len(excludes):
         for i in excludes:
-            command += " --exclude '{0}'".format(i)
+            command += ' --exclude "{0}"'.format(i)
     print(command)
     process = Popen(command, shell=True, 
                     stdout=PIPE, stderr=PIPE,

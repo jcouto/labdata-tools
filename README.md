@@ -4,6 +4,20 @@ Run custom pipelines from defined data locations.
 
 ### Command line:
 
+#### Delete local data
+
+``labdata clean_local -w 4``
+
+Deletes all data from the local directory that is the same on the remote and is older than 4 weeks.
+
+``labdata clean_local -n``
+
+Skips the checksum, compares only filesize.
+
+``labdata clean_local JC027``
+
+Deletes all data from a specific subject.
+
 #### List sessions with suite2p or two_photon data:
 
 ``labdata sessions JC027 -f suite2p two_photon``

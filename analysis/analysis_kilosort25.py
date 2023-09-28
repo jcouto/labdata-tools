@@ -1,18 +1,19 @@
-from labdatatools import *
+from labdatatools.analysis import *
 import argparse
-from glob import glob
-from os.path import join as pjoin
-import os
 
 class AnalysisKilosort25(BaseAnalysisPlugin):
     def __init__(self,subject,
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = ['.phy'],
+                 excludes = default_excludes,
                  bwlimit = None,
                  overwrite = False,
                  **kwargs):
+        '''
+labdatatools wrapper for running kilosort 2.5.
+Joao Couto - 2021
+        '''
         super(AnalysisKilosort25,self).__init__(
             subject = subject,
             session = session,
@@ -23,12 +24,12 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
             overwrite = overwrite,
             **kwargs)
         self.name = 'kilosort25'
+        self.output_folder = 'kilosort2.5'
         self.datatypes = ['ephys_*']
         if not datatypes == ['']:
             self.input_folder = datatypes[0]
         else:
             self.input_folder = 'ephys_*'
-        self.output_folder = 'kilosort2.5'
         
     def parse_arguments(self,arguments = []):
         parser = argparse.ArgumentParser(
@@ -45,7 +46,6 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
         self.phy = args.phy
-        
         
     def _run(self):
         folders = self.get_sessions_folders()        
@@ -69,6 +69,11 @@ class AnalysisKilosort25(BaseAnalysisPlugin):
                         self.session[0],
                         os.path.basename(infolder)))
                     if self.phy:
+                        # try to get the kilosort files
+                        from labdatatools.rclone import rclone_get_data
+                        rclone_get_data(subject = self.subject[0],
+                                        session = self.session[0],
+                                        datatype = self.output_folder)
                         cmd = 'phy template-gui {0}'.format(pjoin(outfolder,'params.py'))
                         os.system(cmd)
                         if self.phy:
@@ -133,8 +138,8 @@ ops.NchanTOT  = {nchannels}; % total number of channels in your recording
 ops.chanMap = '{channelmapfile}';
 ops.fs = {srate};   % sample rate
 ops.fshigh = 300;   % frequency for high pass filtering (150)
-ops.Th = [10 4];    % threshold on projections for each per pass 
-ops.lam = 10;       %  amplitude penalty (0 not used, 10 average, 50 is a lot) 
+ops.Th = [9 3];     % threshold on projections for each per pass ([10 4])
+ops.lam = 10;       %  amplitude penalty (0 not used, 10 average, 50 is a lot)  (10)
 ops.AUCsplit = 0.9; % isolation for spliting clusters (max = 1)
 ops.minFR = 1/50;   % minimum spike rate (Hz)
 ops.momentum = [20 400]; % number of samples to average over when building templates [start end] 
@@ -149,13 +154,11 @@ ops.nblocks = 5;         % type of data shifting (0 = none, 1 = rigid, >2 = nonr
 ops.spkTh           = -6;      % spike threshold in standard deviations (-6)
 ops.reorder         = 1;       % whether to reorder batches for drift correction. 
 ops.nskip           = 25;  % how many batches to skip for determining spike PCs
-
 ops.GPU            = 1; % has to be 1
-% ops.Nfilt        = 1024; % max number of clusters
-ops.nfilt_factor   = 4; % max number of clusters per good channel (even temporary ones)
+ops.nfilt_factor   = 8; % max number of clusters per good channel (even temporary ones) (4)
 ops.ntbuff         = 64;    % samples of symmetrical buffer for whitening and spike detection
 ops.NT             = 64*1024+ ops.ntbuff; % must be multiple of 32 + ntbuff (try decreasing if out of memory). 
-ops.whiteningRange = 32; % number of channels to use for whitening each channel
+ops.whiteningRange = 32; % number of channels to use for whitening each channel (32)
 ops.nSkipCov       = 25; % compute whitening matrix from every N-th batch
 ops.scaleproc      = 200;   % int16 scaling of whitened data
 ops.nPCs           = 3; % how many PCs to project the spikes into
@@ -169,9 +172,6 @@ ops.chanMap = fullfile(outfolder, chanMapFile);
 fprintf('Looking for data inside %s ', outfolder)
 disp('');
 % main parameter changes from Kilosort2 to v2.5
-ops.sig        = 20;  % spatial smoothness constant for registration
-ops.fshigh     = 300; % high-pass more aggresively
-ops.nblocks    = 5; % blocks for registration. 0 turns it off, 1 does rigid registration. Replaces "datashift" option. 
 
 % is there a channel map file in this folder?
 fs = dir(fullfile(inputfolder, 'chan*.mat'));
@@ -252,8 +252,8 @@ def read_spikeglx_meta(metafile):
     meta['sRateHz'] = meta[meta['typeThis'][:2]+'SampRate']
     try:
         parse_coords_from_spikeglx_metadata(meta)
-    except:
-        pass
+    except Exception as err:
+        print(err)
     return meta
 
 def parse_coords_from_spikeglx_metadata(meta,shanksep = 250):
@@ -272,7 +272,10 @@ def parse_coords_from_spikeglx_metadata(meta,shanksep = 250):
     chans = imro[:,0]
     banks = imro[:,1]
     shank = np.zeros(imro.shape[0])
-    connected = np.stack([[int(i) for i in m.split(':')] for m in meta['snsShankMap'][1:]])[:,3]
+    if 'snsShankMap' in meta.keys():
+        connected = np.stack([[int(i) for i in m.split(':')] for m in meta['snsShankMap'][1:]])[:,3]
+    else:
+        connected = np.stack([[int(i) for i in m.split(':')] for m in meta['snsGeomMap'][1:]])[:,3] # recent spikeglx
     if (probetype <= 1) or (probetype == 1100) or (probetype == 1300):
         # <=1 3A/B probe
         # 1100 UHD probe with one bank
