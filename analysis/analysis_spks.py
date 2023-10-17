@@ -39,16 +39,20 @@ Joao Couto - October 2023
         
         parser.add_argument('-p','--probe',
                             action='store', default=None, type = int,
-                            help = "Probe number to sort or visualize")
+                            help = "THIS DOES NOTHING NOW. WILL BE FOR OPENING PHY")
+        parser.add_argument('-t','--tempdir',
+                            action='store', default = '/scratch', type = str,
+                            help = "Temporary directory to store intermediate results. (default is /scratch - needs to be a fast disk like an NVME)")
 
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
+        self.tempdir = args.tempdir
 
     def _run(self):
         from spks.sorting import ks25_sort_multiprobe_sessions
         folders = self.get_sessions_folders()
         results = ks25_sort_multiprobe_sessions(folders,
-                                                temporary_folder='/scratch',
+                                                temporary_folder=tempdir,
                                                 use_docker=False,
                                                 sorting_results_path_rules=['..', '..', '{sortname}', '{probename}'],
                                                 sorting_folder_dictionary={'sortname': self.output_folder,
