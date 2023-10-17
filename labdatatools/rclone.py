@@ -173,7 +173,21 @@ Note:
 
     fmts = path_format.split('/')
     if remote is None:
-        remote = labdata_preferences['rclone'] 
+        #print("Get data called but no remote provided. Going to get recursively from all remotes possible.")
+        if 'archives' in labdata_preferences.keys():
+            remotes = labdata_preferences['archives']+[labdata_preferences['rclone']]
+        else:
+            remotes = [labdata_preferences['rclone']]
+        for r in remotes:
+            rclone_get_data(path_format = path_format,
+                            includes = includes,
+                            excludes = excludes,
+                            ipath = ipath,
+                            overwrite = overwrite,
+                            verbose = verbose,
+                            remote = r,
+                            **kwargs)
+        return
     keys = dict(remote,
                 path = labdata_preferences['paths'][ipath],
                 **kwargs)
