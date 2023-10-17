@@ -41,14 +41,18 @@ def rclone_list_subjects(remote = None):
     Returns a pandas dataframe with the list of subjects if the subjects are 
 the first level of the folder hierarchy.
     '''
-
+    subjects = []
     if remote is None:
         remote = labdata_preferences['rclone']
+        if 'archives' in labdata_preferences.keys():
+            archivefiles = get_archived_list()
+            subjects = list(filter(lambda x:type(x) is str,
+                      archivefiles.subject.drop_duplicates().values))
     out = check_output('rclone lsd {drive}:{folder}'.format(**remote).split(' ')).decode("utf-8")
     out = out.splitlines()
-    subjects = [o.split(' ')[-1] for o in out]
+    subjects += [o.split(' ')[-1] for o in out]
     if len(subjects):
-        return subjects
+        return np.unique(subjects)
     else:
         return None
     
