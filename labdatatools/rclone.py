@@ -57,16 +57,22 @@ the first level of the folder hierarchy.
         return None
     
 def rclone_list_sessions(subject,remote = None):
+    sessions = []
     if remote is None:
         remote = labdata_preferences['rclone']
+        if 'archives' in labdata_preferences.keys():
+            archivefiles = get_archived_list()
+            sessions  = [i for i in archivefiles[
+                archivefiles.subject == subject].session.drop_duplicates().values]
+
     out = check_output(
         'rclone lsd {drive}:{folder}/{subject}'.format(
             **remote,
             subject = subject).split(' ')).decode("utf-8")
     out = out.splitlines()
-    sessions = [o.split(' ')[-1] for o in out]
+    sessions += [o.split(' ')[-1] for o in out]
     if len(sessions):
-        return sessions
+        return np.unique(sessions)
     else:
         return None
 
@@ -78,8 +84,14 @@ def rclone_list_files(subject = '', filters = [],
     Gets a list of all files in the remote.
     Specify a subject to get only the first level.
     '''
+    archivefiles = []
     if remote is None:
         remote  = labdata_preferences['rclone']
+        if 'archives' in labdata_preferences.keys():
+            archivefiles = get_archived_list()
+            if len(subject):
+                archivefiles = archivefiles[archivefiles.subject == subject]
+                
     cmd = 'rclone ls {drive}:{folder}/{subject}'.format(
         subject=subject,
         **remote)
@@ -131,8 +143,15 @@ def rclone_list_files(subject = '', filters = [],
                                   dirname = dirname,
                                   subject = sub,
                                   session = session,
-                                  datatype = datatype))
-    return pd.DataFrame(files)
+                                  datatype = datatype,
+                                  remote_drive = remote['drive'],
+                                  remote_folder = remote['folder']))
+    if len(archivefiles):
+        files = pd.concat([archivefiles,pd.DataFrame(files)])
+
+    else:
+        files = pd.DataFrame(files)
+    return files
 
 def rclone_get_data(path_format = None,
                     includes = [],
