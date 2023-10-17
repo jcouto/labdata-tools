@@ -214,6 +214,7 @@ The commands are:
         parser.add_argument('-d','--datatype', action='store', default=None, type=str)
 
         parser.add_argument('-l','--bwlimit', action='store', default=None, type=int)
+        parser.add_argument('-m','--max-transfer', action='store', default=None, type=int)
         parser.add_argument('--path-index', action='store',
                             default=0, type=int)
         parser.add_argument('-e','--excludes', action='store',
@@ -227,6 +228,7 @@ The commands are:
                            datatype = args.datatype,
                            path_idx = args.path_index,
                            bwlimit = args.bwlimit,
+                           max_transfer = args.max_transfer,
                            overwrite = args.overwrite,
                            excludes = args.excludes)
         

@@ -33,7 +33,7 @@ default_excludes = ['**.phy**',                # skip .phy folders
                     '**._.DS_Store**',
                     '**.DS_Store**',
                     '**dummy**',
-                    '**filtered_recording.ap.bin', # filtered recording from spks sorting
+                    '**filtered_recording.*.bin', # filtered recording from spks sorting
                     '**FakeSubject**']
 
 def list_subjects():

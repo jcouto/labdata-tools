@@ -5,23 +5,31 @@ from .utils import *
 from tqdm import tqdm
 
 def get_archived_list(pref = labdata_preferences):
-
     preffolder = os.path.dirname(LABDATA_FILE)
     archived_files = []
     if 'archives' in pref.keys():
         if not pref['archives'] is None:
             for iarchive in range(len(pref['archives'])):
-                filename = pjoin(preffolder,'archive_list_{drive}_{folder}.xlsx'.format(**pref['archives'][iarchive]))
+                filename = pjoin(preffolder,'archive_list_{drive}_{folder}.csv'.format(**pref['archives'][iarchive]))
                 pref['archives'][iarchive]['file_list'] = filename
                 if not os.path.exists(filename):
-                    print('No list for archive [{0}], fetching list of all files.'.format(pref['archives'][iarchive]['drive']))
-                    print('... this will take a while...',flush=True)
-                    from .rclone import rclone_list_files
-                    files = rclone_list_files(remote = pref['archives'][iarchive])
-                    print('Saving to: {0}'.format(filename),flush=True)
-                    files.to_excel(filename)
-                else:
-                    files = pd.read_excel(filename)
+                    print('No list for archive [{0}]'.format(pref['archives'][iarchive]['drive']),flush = True)
+                    try:
+                        
+                        res = check_output('rclone copyto --progress {drive}:/archive_list.csv {filename}'.format(
+                            drive=labdata_preferences['archives'][iarchive]['drive'],
+                            filename = filename),
+                                           shell=True)
+                    except:
+                        print('Fetching list of all files.')
+                        print('... this will take a while...',flush=True)
+                        from .rclone import rclone_list_files
+                        files = rclone_list_files(remote = pref['archives'][iarchive])
+                        print('Saving to: {0}'.format(filename),flush=True)
+                        files.to_csv(filename,index = False)
+                files = pd.read_csv(filename)
+                files['remote_drive'] = labdata_preferences['archives'][iarchive]['drive']
+                files['remote_folder'] = labdata_preferences['archives'][iarchive]['folder']
                 archived_files.append(files)
     if len(archived_files):
         return pd.concat(archived_files)
@@ -210,9 +218,11 @@ def rclone_upload_data(subject='',
                        datatype = None,
                        path_idx = 0,
                        bwlimit = None,
+                       max_transfer = None,
                        excludes = default_excludes,
                        overwrite = False,
                        add_pacer_options = True,
+                       check_archives = True,
                        remote = None):
     # this needs a pipe
     
@@ -230,8 +240,10 @@ def rclone_upload_data(subject='',
             remotepath += '/'+datatype
 
     # check that the files are not already on an archive first.
+        
     if remote is None:
         remote = labdata_preferences['rclone']
+
     command = 'rclone copy --progress {path} {drive}:{folder}{remote}'.format(
         remote=remotepath,
         path = localpath,
@@ -240,11 +252,17 @@ def rclone_upload_data(subject='',
         command += ' --drive-pacer-min-sleep 10ms --drive-pacer-burst 1000'
     if not bwlimit is None:
         command += ' --bwlimit {0}M'.format(bwlimit)
+    if not max_transfer is None:
+        command += ' --max-transfer={0}G --cutoff-mode=cautious'.format(max_transfer)
     if not overwrite:
         command += ' --ignore-existing'
     if len(excludes):
         for i in excludes:
             command += ' --exclude "{0}"'.format(i)
+    if check_archives:
+        if 'archives' in labdata_preferences.keys():
+            for a in labdata_preferences['archives']:
+                command += ' --compare-dest {0}:{1} --ignore-times'.format(a['drive'],a['folder'])
     print(command)
     process = Popen(command, shell=True, 
                     stdout=PIPE, stderr=PIPE,
@@ -255,9 +273,7 @@ def rclone_upload_data(subject='',
         if nextline == '' and process.poll() is not None:
             break
         #if 'ETA' in nextline:
-        print('\r'+nextline,
-              end='',
-              flush=True) # decode does not play nice with "\r"
-
+        print(nextline,end = '\r') # decode does not play nice with "\r"
+        
     output = process.communicate()[0]
     exitCode = process.returncode
