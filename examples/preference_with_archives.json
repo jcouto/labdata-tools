@@ -1,0 +1,19 @@
+{
+    "path_format": "{subject}/{session}/{datatype}",
+    "paths": [
+        "/home/data"
+    ],
+    "plugins_folder": "/home/joao/labdatatools/analysis",
+    "rclone": {
+        "drive": "churchland_data",
+        "folder": "data"
+    },
+    "archives": [
+	{"drive": "globus_shared",
+         "folder": "data"}
+    ],
+    "remote_queue": {
+        "remote": "hoffman2.idre.ucla.edu",
+        "user": "username"
+    }
+}
