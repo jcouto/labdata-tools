@@ -52,7 +52,7 @@ Joao Couto - October 2023
         from spks.sorting import ks25_sort_multiprobe_sessions
         folders = self.get_sessions_folders()
         results = ks25_sort_multiprobe_sessions(folders,
-                                                temporary_folder=tempdir,
+                                                temporary_folder=self.tempdir,
                                                 use_docker=False,
                                                 sorting_results_path_rules=['..', '..', '{sortname}', '{probename}'],
                                                 sorting_folder_dictionary={'sortname': self.output_folder,
