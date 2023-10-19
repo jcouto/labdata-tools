@@ -299,7 +299,7 @@ def rclone_upload_data(subject='',
     if check_archives:
         if 'archives' in labdata_preferences.keys():
             for a in labdata_preferences['archives']:
-                command += ' --compare-dest {0}:{1} --ignore-times'.format(a['drive'],a['folder'])
+                command += ' --compare-dest {0}:{1} --size-only'.format(a['drive'],a['folder'])
     print(command)
     process = Popen(command, shell=True, 
                     stdout=PIPE, stderr=PIPE,
