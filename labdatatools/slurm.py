@@ -1,7 +1,7 @@
 from .utils import *
 import subprocess as sub
 
-LABDATA_SLURM_FOLDER = pjoin(os.path.expanduser('~'),'labdatatools','slurm')
+LABDATA_SLURM_FOLDER = pjoin(os.path.expanduser('~'),'labdatatools','slurm') #TODO: get this from preferences file
 
 def has_slurm():
     proc = sub.Popen('sinfo', shell=True, stdout=sub.PIPE, stderr = sub.PIPE)

@@ -103,7 +103,7 @@ def rclone_list_files(subject = '', filters = [],
             cmd += ' --exclude "{0}"'.format(i)
 
     #print(cmd,flush=True)
-    out = check_output(cmd.split(' ')).decode("utf-8")
+    out = check_output(cmd.split(' ')).decode("utf-8") #FIXME: this returns a nonzero exit status and a CalledProcessError if there are no directories found. Problematic when repeating over archives. 
     files = []
     for a in out.split('\n'):
         a = a.strip(' ').split(' ')

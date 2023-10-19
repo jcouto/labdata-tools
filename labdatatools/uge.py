@@ -1,7 +1,7 @@
 from .utils import *
 import subprocess as sub
 
-LABDATA_UGE_FOLDER = pjoin(os.path.expanduser('~'),'labdatatools','uge')
+LABDATA_UGE_FOLDER = pjoin(os.path.expanduser('~'),'labdatatools','uge') #TODO: get this from preferences file
 
 def has_uge():
     proc = sub.Popen('qstat', shell=True, stdout=sub.PIPE, stderr = sub.PIPE)
