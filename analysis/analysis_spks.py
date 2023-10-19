@@ -10,6 +10,7 @@ class AnalysisSpks(BaseAnalysisPlugin):
                  excludes = default_excludes,
                  bwlimit = None,
                  overwrite = False,
+                 delete_session = False,
                  **kwargs):
         '''
 labdatatools wrapper for running spike sorting through spks
@@ -23,6 +24,7 @@ Joao Couto - October 2023
             excludes = excludes,
             bwlimit = bwlimit,
             overwrite = overwrite,
+            delete_session = delete_session,
             **kwargs)
         self.name = 'spks'
         self.output_folder = 'kilosort2.5'
@@ -43,10 +45,14 @@ Joao Couto - October 2023
         parser.add_argument('-t','--tempdir',
                             action='store', default = '/scratch', type = str,
                             help = "Temporary directory to store intermediate results. (default is /scratch - needs to be a fast disk like an NVME)")
+        parser.add_argument('-d','--device',
+                            action='store', default = 'cuda', type = str,
+                            help = "Device for pytorch (cuda|cpu)")
 
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
         self.tempdir = args.tempdir
+        self.device = args.device
 
     def _run(self):
         from spks.sorting import ks25_sort_multiprobe_sessions
@@ -54,6 +60,7 @@ Joao Couto - October 2023
         results = ks25_sort_multiprobe_sessions(folders,
                                                 temporary_folder=self.tempdir,
                                                 use_docker=False,
+                                                device = self.device,
                                                 sorting_results_path_rules=['..', '..', '{sortname}', '{probename}'],
                                                 sorting_folder_dictionary={'sortname': self.output_folder,
                                                                            'probename': 'probe0'})
