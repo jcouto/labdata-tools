@@ -55,6 +55,8 @@ The commands are:
                             default=False)
         parser.add_argument('--no-upload', action='store_false',
                             default=True)
+        parser.add_argument('--delete-session', action='store_true',
+                            default=False)
         parser.add_argument('-p','--partial',
                             action='store', default=None, type=str)
         parser.add_argument('-q','--queue',
@@ -107,7 +109,7 @@ The commands are:
             if not args.session == ['']:
                 session = args.session[0]
 
-            submit_remote_job(labdatacmd,subject=subject,session = session)
+            submit_remote_job(labdatacmd, subject=subject, session = session) 
             return
 
         if args.analysis in ['avail','available','list'] or not args.analysis in [p['name'] for p in plugins]:
@@ -167,6 +169,8 @@ The commands are:
                             default=True)
         parser.add_argument('-p','--partial',
                             action='store', default=None, type=str)
+        parser.add_argument('--delete-session', action='store_true',
+                            default=False)
 
         sysargs = sys.argv[2:]
         analysisargs = []
@@ -197,6 +201,7 @@ The commands are:
                 excludes = args.excludes,
                 overwrite = args.overwrite,
                 upload = args.no_upload,
+                delete_session = args.delete_session,
                 partial_run = args.partial)
         analysis.parse_arguments(analysisargs)
 

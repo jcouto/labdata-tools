@@ -30,7 +30,8 @@ class BaseAnalysisPlugin(object):
                  overwrite = False,
                  upload = True,
                  arguments = [],
-                 partial_run = None, # 'get', 'run' or 'put'
+                 partial_run = None, # 'get', 'run' or 'put',
+                 delete_session = False,
                  **kwargs):
 
         self.description = 'Not Implemented'
@@ -47,6 +48,7 @@ class BaseAnalysisPlugin(object):
         self.bwlimit = bwlimit # For upload
         self.input_folder = ''
         self.output_folder = 'analysis'
+        self.delete_session = delete_session
         self.has_gui = False
         
     def get_sessions_folders(self):
@@ -130,16 +132,16 @@ class BaseAnalysisPlugin(object):
                                     sbatch_append='')
         elif has_uge():
             return submit_uge_job(jobname=self.name.lower(),
-                                    command=cmd,
-                                    ntasks=ntasks,
-                                    ncpuspertask = ncpuspertask,
-                                    memory=memory,
-                                    walltime=walltime,
-                                    partition=partition,
-                                    conda_environment=conda_environment,
-                                    module_environment=module,
-                                    mail=None,
-                                    sbatch_append='')
+                                  command=cmd,
+                                  ntasks=ntasks,
+                                  ncpuspertask = ncpuspertask,
+                                  memory=memory,
+                                  walltime=walltime,
+                                  partition=partition,
+                                  conda_environment=conda_environment,
+                                  module_environment=module,
+                                  mail=None,
+                                  sbatch_append='')
 
     def parse_slurm_cmd(self, cmd):
         '''Use this to change the command from a subclass.'''
@@ -177,12 +179,26 @@ class BaseAnalysisPlugin(object):
             for subject in self.subject:
                 for session in self.session:
                     print('Sending data for session: {0} {1}'.format(subject,session))
-                    rclone_upload_data(subject = subject,
-                                       session = session,
-                                       datatype = self.output_folder,
-                                       path_idx = 0,
-                                       bwlimit = self.bwlimit,
-                                       overwrite = self.overwrite,
-                                       excludes = self.excludes)        
+                    res = rclone_upload_data(subject = subject,
+                                                session = session,
+                                                datatype = self.output_folder,
+                                                path_idx = 0,
+                                                bwlimit = self.bwlimit,
+                                                overwrite = self.overwrite,
+                                                excludes = self.excludes)        
+                    if res:
+                        print(f'rclone upload returned with error {res}')
+                        continue
+                    if self.delete_session:
+                        print('Deleting session from local: {0} {1}'.format(subject,session))
+                        key = dict(datapath = self.prefs['paths'][0],
+                                   subject = subject,
+                                   session = session)
+                        folders = glob(pjoin(key['datapath'],
+                                             key['subject'],
+                                             key['session']))
+                        if len(folders):
+                            print('\t\tThis includes all files under: {0}'.format(folders[0]))
+                            from shutil import rmtree
+                            rmtree(folders[0])
 
-        

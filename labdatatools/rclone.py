@@ -314,3 +314,4 @@ def rclone_upload_data(subject='',
         
     output = process.communicate()[0]
     exitCode = process.returncode
+    return exitCode
