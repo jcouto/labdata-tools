@@ -119,6 +119,8 @@ class BaseAnalysisPlugin(object):
             cmd += ' --overwrite'
         if not self.partial_run is None:
             cmd += ' --partial {0}'.format(self.partial_run)
+        if self.delete_session is True:
+            cmd += ' --delete-session'
         if len(analysisargs):
             cmd += ' ' + ' '.join(analysisargs)    
         cmd = self.parse_slurm_cmd(cmd)
