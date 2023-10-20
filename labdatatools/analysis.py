@@ -190,7 +190,7 @@ class BaseAnalysisPlugin(object):
                                                 bwlimit = self.bwlimit,
                                                 overwrite = self.overwrite,
                                                 excludes = self.excludes)        
-                    if res > 1:
+                    if res > 0:
                         print(f'rclone upload returned with error {res}')
                         continue
                     if self.delete_session:

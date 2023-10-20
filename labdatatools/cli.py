@@ -133,6 +133,7 @@ The commands are:
                 excludes = args.excludes,
                 overwrite = args.overwrite,
                 upload = args.no_upload,
+                delete_session = args.delete_session,
                 partial_run = args.partial)
         analysis.parse_arguments(analysisargs)
         analysis.validate_parameters()
