@@ -14,10 +14,14 @@ def load_plugins():
     import sys
     sys.path.append(labdata_preferences['plugins_folder'])
     for f in analysis:
-        eval('exec("from {0} import Analysis{1}")'.format(
-            os.path.basename(f['file']).replace('.py',''),
-            f['name'].capitalize()))
-        f['object'] = eval("Analysis{0}".format(f['name'].capitalize()))
+        try:
+            eval('exec("from {0} import Analysis{1}")'.format(
+                os.path.basename(f['file']).replace('.py',''),
+                f['name'].capitalize()))
+            f['object'] = eval("Analysis{0}".format(f['name'].capitalize()))
+        except Exception as err:
+            print('Error loading the {0} plugin!'.format(f['name']))
+            print(err)
     return analysis
 
 class BaseAnalysisPlugin(object):
