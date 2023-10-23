@@ -46,8 +46,9 @@ the first level of the folder hierarchy.
         remote = labdata_preferences['rclone']
         if 'archives' in labdata_preferences.keys():
             archivefiles = get_archived_list()
-            subjects = list(filter(lambda x:type(x) is str,
-                      archivefiles.subject.drop_duplicates().values))
+            if not archivefiles is None:
+                subjects = list(filter(lambda x:type(x) is str,
+                                       archivefiles.subject.drop_duplicates().values))
     out = check_output('rclone lsd {drive}:{folder}'.format(**remote).split(' ')).decode("utf-8")
     out = out.splitlines()
     subjects += [o.split(' ')[-1] for o in out]
@@ -62,8 +63,9 @@ def rclone_list_sessions(subject,remote = None):
         remote = labdata_preferences['rclone']
         if 'archives' in labdata_preferences.keys():
             archivefiles = get_archived_list()
-            sessions  = [i for i in archivefiles[
-                archivefiles.subject == subject].session.drop_duplicates().values]
+            if not archivefiles is None:
+                sessions  = [i for i in archivefiles[
+                    archivefiles.subject == subject].session.drop_duplicates().values]
 
     out = check_output(
         'rclone lsd {drive}:{folder}/{subject}'.format(
