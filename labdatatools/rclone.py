@@ -105,7 +105,10 @@ def rclone_list_files(subject = '', filters = [],
             cmd += ' --exclude "{0}"'.format(i)
 
     #print(cmd,flush=True)
-    out = check_output(cmd.split(' ')).decode("utf-8") #FIXME: this returns a nonzero exit status and a CalledProcessError if there are no directories found. Problematic when repeating over archives. 
+    try:
+        out = check_output(cmd.split(' ')).decode("utf-8") #FIXME: this returns a nonzero exit status and a CalledProcessError if there are no directories found. Problematic when repeating over archives.
+    except:
+        out = ''
     files = []
     for a in out.split('\n'):
         a = a.strip(' ').split(' ')
@@ -259,6 +262,7 @@ def rclone_upload_data(subject='',
                        bwlimit = None,
                        max_transfer = None,
                        excludes = default_excludes,
+                       includes = [],
                        overwrite = False,
                        add_pacer_options = True,
                        check_archives = True,
@@ -298,6 +302,10 @@ def rclone_upload_data(subject='',
     if len(excludes):
         for i in excludes:
             command += ' --exclude "{0}"'.format(i)
+    if len(includes):
+        for i in includes:
+            command += ' --include "{0}"'.format(i)
+
     if check_archives:
         if 'archives' in labdata_preferences.keys():
             for a in labdata_preferences['archives']:
