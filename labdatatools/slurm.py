@@ -61,7 +61,7 @@ echo JOB FINISHED `date`
 '''.format(jobname = jobname, cmd = command)
     if not os.path.exists(LABDATA_SLURM_FOLDER):
         os.makedirs(LABDATA_SLURM_FOLDER)
-    nfiles = len(glob(pjoin(LABDATA_SLURM_FOLDER,'*.stdout')))
+    nfiles = len(glob(pjoin(LABDATA_SLURM_FOLDER,'*.sh')))
     filename = pjoin(LABDATA_SLURM_FOLDER,'{jobname}_{nfiles}.sh'.format(jobname = jobname,
                                                                               nfiles = nfiles+1))
     with open(filename,'w') as f:
