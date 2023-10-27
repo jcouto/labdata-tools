@@ -14,6 +14,7 @@ def submit_slurm_job(jobname,
                      command,
                      ntasks=None,
                      ncpuspertask = None,
+                     gpus = None,
                      memory=None,
                      walltime=None,
                      partition=None,
@@ -24,7 +25,7 @@ def submit_slurm_job(jobname,
 
     if ncpuspertask is None and ntasks is None:
         from multiprocessing import cpu_count
-        ncpuspertask = cpu_count()
+        ncpuspertask = 2#cpu_count()
         ntasks = 1
     if ntasks is None:
         ntasks = 1
@@ -46,6 +47,8 @@ def submit_slurm_job(jobname,
         sjobfile += '#SBATCH --time={0} \n'.format(walltime)
     if not memory is None:
         sjobfile += '#SBATCH --mem={0} \n'.format(memory)
+    if not gpus is None:
+        sjobfile += '#SBATCH --gpus={0} \n'.format(gpus)
     if not partition is None:
         sjobfile += '#SBATCH --partition={0} \n'.format(partition)
     if not mail is None:
@@ -59,6 +62,7 @@ def submit_slurm_job(jobname,
 {cmd}
 echo JOB FINISHED `date`
 '''.format(jobname = jobname, cmd = command)
+
     if not os.path.exists(LABDATA_SLURM_FOLDER):
         os.makedirs(LABDATA_SLURM_FOLDER)
     nfiles = len(glob(pjoin(LABDATA_SLURM_FOLDER,'*.sh')))

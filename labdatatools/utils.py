@@ -20,11 +20,11 @@ default_labdata_preferences = {'paths':[pjoin(os.path.expanduser('~'),'data')],
                                #                     user='username'),
                                'rclone' : dict(drive = 'churchland_data',
                                                folder = 'data'),
-                               'archives': None,
-                               #'archives': [dict(drive = 'globus_shared',
-                               #                         folder = 'data')],
+                               'archives': None, #'archives': [dict(drive = 'globus_shared', folder = 'data')],
                                'plugins_folder':pjoin(os.path.expanduser('~'),
-                                                      'labdatatools','analysis')}
+                                                      'labdatatools','analysis'),
+                               'submit_defaults':None,
+                               'run_defaults':{'delete-session':False}}
 
 default_excludes = ['**.phy**',                # skip .phy folders
                     '**temp_wh.dat',           # skip kilosort temp_wh files

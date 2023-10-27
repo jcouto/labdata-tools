@@ -94,13 +94,14 @@ class BaseAnalysisPlugin(object):
         self.put_data()
 
     def submit(self, analysisargs,
-              conda_environment = None,
-              ntasks=None,
-              ncpuspertask = None,
-              memory=None,
-              walltime=None,
-              partition=None,
-              module=None):
+               conda_environment = None,
+               ntasks=None,
+               ncpuspertask = None,
+               memory=None,
+               ngpus = None,
+               walltime=None,
+               partition=None,
+               module=None):
         if self.has_gui:
             print('Command requires the gui... skipping.')
             return
@@ -131,6 +132,7 @@ class BaseAnalysisPlugin(object):
                                     ncpuspertask = ncpuspertask,
                                     memory=memory,
                                     walltime=walltime,
+                                    gpus = ngpus,
                                     partition=partition,
                                     conda_environment=conda_environment,
                                     module_environment=module,
