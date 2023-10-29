@@ -45,8 +45,6 @@ The commands are:
         return labdata_preferences[f'{cli_arg}_defaults'][argument]
         
     def submit(self):
-        for i in ['ncpus','memory','ngpus','delete-session']:
-            print(self._get_default_submit(i))
         parser = argparse.ArgumentParser(
             description = 'Process a dataset locally using slurm or univa grid engine.',
             usage = 'labdata submit <ANALYSIS> -- <PARAMETERS>')
@@ -66,21 +64,21 @@ The commands are:
         parser.add_argument('--overwrite', action='store_true',
                             default=self._get_default_arg('overwrite','submit',False))
         parser.add_argument('--no-upload', action='store_false',
-                            default=self._get_default_submit('no-upload','submit',True))
+                            default=self._get_default_arg('no-upload','submit',True))
         parser.add_argument('--delete-session', action='store_true',
-                            default=self._get_default_submit('delete-session','submit',False))
+                            default=self._get_default_arg('delete-session','submit',False))
         parser.add_argument('-p','--partial',
-                            action='store', default=self._get_default_submit('partial','submit'), type=str)
+                            action='store', default=self._get_default_arg('partial','submit'), type=str)
         parser.add_argument('-q','--queue',
-                            action='store', default=self._get_default_submit('queue','submit'), type=str)
+                            action='store', default=self._get_default_arg('queue','submit'), type=str)
         parser.add_argument('-m','--memory',
-                            action='store', default=self._get_default_submit('memory','submit'), type=int)
-        parser.add_argument('-n','--ncpus', action='store',default = self._get_default_submit('ncpus','submit'), type=int)
-        parser.add_argument('-g','--ngpus', action='store',default = self._get_default_submit('ngpus','submit'), type=int)
+                            action='store', default=self._get_default_arg('memory','submit'), type=int)
+        parser.add_argument('-n','--ncpus', action='store',default = self._get_default_arg('ncpus','submit'), type=int)
+        parser.add_argument('-g','--ngpus', action='store',default = self._get_default_arg('ngpus','submit'), type=int)
         parser.add_argument('--list-queues',action='store_true',default = False)
         parser.add_argument('--list-jobs',action='store_true',default = False)
-        parser.add_argument('--conda-env', action='store',default = self._get_default_submit('conda-env','submit'), type=str)
-        parser.add_argument('--module', action='store',default = self._get_default_submit('module','submit'), type=str)
+        parser.add_argument('--conda-env', action='store',default = self._get_default_arg('conda-env','submit'), type=str)
+        parser.add_argument('--module', action='store',default = self._get_default_arg('module','submit'), type=str)
         parser.add_argument('-t','--walltime', action='store',default = None, type=str)
         sysargs = sys.argv[2:]
         analysisargs = []
@@ -152,7 +150,6 @@ The commands are:
         analysis.validate_parameters()
         if analysis.has_gui:
             print('This command needs to be ran interactively, use "run" instead.')
-        print(args.ngpus)
         jobnumber = analysis.submit(analysisargs,
                                     conda_environment = args.conda_env,
                                     ncpuspertask = args.ncpus,
