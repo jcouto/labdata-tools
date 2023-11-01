@@ -1,19 +1,29 @@
-BootStrap: library
-From: ubuntu:20.04
-
+#BootStrap: library
+#From: ubuntu:22.04
+BootStrap: docker
+From: continuumio/anaconda3
 %post
     apt-get -qq update
     export debian_frontend=noninteractive     
-    DEBIAN_FRONTEND=noninteractive apt-get -y install python3 \
-    				   python3-pip git rclone xorg \
-				   ca-certificates curl unzip
+    DEBIAN_FRONTEND=noninteractive apt-get -y install  \
+    				   git rclone xorg \
+				   ca-certificates curl unzip wget
     # need xorg also for matlab runtime
 
+    # install anaconda
+    #mkdir /anaconda-install
+    #wget https://repo.continuum.io/archive/Anaconda3-2023.09-0-Linux-x86_64.sh -O /anaconda-install/anaconda.sh
+    #bash /anaconda-install/anaconda.sh -b -p /usr/local
+    #rm -rf /anaconda-install
     # labdata
-    pip3 install git+https://github.com/jcouto/labdata-tools.git@dev
+    conda install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
+
+    pip install git+https://github.com/jcouto/labdata-tools.git@dev
     # spks
-    pip3 install ipython torch==2.0.0 torchaudio==2.0.1 numpy pandas h5py scipy matplotlib
-    pip3 install git+https://github.com/spkware/spks.git@dev
+    #pip install ipython numpy pandas h5py scipy matplotlib
+
+    #pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
+    pip install git+https://github.com/spkware/spks.git@dev
     # kilosort
     git clone https://github.com/spkware/package_kilosort2_5.git /opt/kilosort2_5
     
