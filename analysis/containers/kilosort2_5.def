@@ -1,0 +1,58 @@
+BootStrap: library
+From: ubuntu:20.04
+
+%post
+    apt-get -qq update
+    export debian_frontend=noninteractive     
+    DEBIAN_FRONTEND=noninteractive apt-get -y install python3 \
+    				   python3-pip git rclone xorg \
+				   ca-certificates curl unzip
+    # need xorg also for matlab runtime
+
+    # labdata
+    pip3 install git+https://github.com/jcouto/labdata-tools.git@dev
+    # spks
+    pip3 install ipython torch==2.0.0 torchaudio==2.0.1 numpy pandas h5py scipy matplotlib
+    pip3 install git+https://github.com/spkware/spks.git@dev
+    # kilosort
+    git clone https://github.com/spkware/package_kilosort2_5.git /opt/kilosort2_5
+    
+    mkdir -p /opt/mcr_install
+    mkdir -p /opt/mcr
+    
+    MATLAB_VERSION=R2022a							
+    MCR_VERSION=v912
+    MCR_UPDATE=7
+    curl -fsSL --retry 5 https://ssd.mathworks.com/supportfiles/downloads/${MATLAB_VERSION}/Release/${MCR_UPDATE}/deployment_files/installer/complete/glnxa64/MATLAB_Runtime_${MATLAB_VERSION}_Update_${MCR_UPDATE}_glnxa64.zip > /opt/mcr_install/mcr.zip
+    unzip -q /opt/mcr_install/mcr.zip -d /opt/mcr_install
+    cat << EOF > /opt/mcr_install/installer_input.txt
+    mode silent
+    destinationFolder /opt/mcr
+    agreeToLicense yes
+    product.MATLAB_Runtime___Core true
+    product.MATLAB_Runtime___Non_Interactive_MATLAB true
+    product.MATLAB_Runtime___Numerics true
+    product.MATLAB_Runtime___Signal_Processing_Toolbox_Addin true
+    product.MATLAB_Runtime___Image_Processing_Toolbox_Addin true
+    product.MATLAB_Runtime___Statistics_and_Machine_Learning_Toolbox_Addin true
+    product.MATLAB_Runtime___Parallel_Computing_Toolbox_Cluster_Addin true
+    product.MATLAB_Runtime___Parallel_Computing_Toolbox_GPU_Addin true
+EOF
+    /opt/mcr_install/install -inputFIle /opt/mcr_install/installer_input.txt
+    rm -rf /opt/mcr_install
+    apt auto-remove
+    apt clean
+    
+%environment
+    export LABDATA_CONTAINER=1
+    export LC_ALL=C
+    export PATH=$PATH:/opt/kilosort2_5/bin
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/mcr/v912/runtime/glnxa64:/opt/mcr/v912/bin/glnxa64:/opt/mcr/v912/sys/os/glnxa64:/opt/mcr/v912/extern/bin/glnxa64
+    echo Loaded labdata container for Kilosort 2.5 and spks
+    
+%runscript
+    exec echo "$@"
+    # this will use the analysis path indicated in the preference file, make sure that exists.
+%labels
+    Maintainer Joao Couto
+    Date 2023-10-30
