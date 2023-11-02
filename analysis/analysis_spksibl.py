@@ -86,6 +86,7 @@ Joao Couto - October 2023
                     new_name = re.sub(f'imec[0-9][.]',f'imec{prbnumber}{finalchar}.', old_filename.name) 
                     new_filename = old_filename.parent / new_name
                     old_filename.replace(new_filename) # rename the files
+                    old_filename.unlink(missing_ok=True)
 
         ####### 2. replace the missing tilde in the files for proper parsing
         tmp = [list_spikeglx_binary_paths(s) for s in folders]
