@@ -145,14 +145,23 @@ Joao Couto - October 2023
                 ff.writelines(text)
         
 
-        results = ks25_sort_multiprobe_sessions(folders,
-                                                temporary_folder=self.tempdir,
-                                                use_docker=False,
-                                                device = self.device,
-                                                sorting_results_path_rules=['..', '..', '{sortname}', '{probename}'],
-                                                sorting_folder_dictionary={'sortname': self.output_folder,
-                                                                           'probename': 'probe0'})
-   
+        try:
+            results = ks25_sort_multiprobe_sessions(folders,
+                                                    temporary_folder=self.tempdir,
+                                                    use_docker=False,
+                                                    device = self.device,
+                                                    sorting_results_path_rules=['..', '..', '{sortname}', '{probename}'],
+                                                    sorting_folder_dictionary={'sortname': self.output_folder,
+                                                                               'probename': 'probe0'})
+        except Exception as error:
+            print("An exception occurred:", type(error).__name__, "–", error)
+            print("Deleting all local files:")
+
+            from pathlib import Path
+            datapath = self.prefs['paths'][0]
+            path2del = Path(datapath) / self.subject / self.session
+            path2del.rmtree() # delete the data for a failed job
+
         if not len(results):
             self.upload = False
 
