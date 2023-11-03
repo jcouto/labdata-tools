@@ -75,7 +75,7 @@ Joao Couto - October 2023
         # ##### 1. rename the files for individual shanks
         binfiles = []
         for f in folders:
-            binfiles.extend(list(Path(f).rglob('*[0-9].ap.meta')))
+            binfiles.extend(list(Path(f).rglob('*[0-9].ap.cbin')))
         for file in binfiles:
             prbfolder = file.parent 
             finalchar = str(prbfolder)[-1]
