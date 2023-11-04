@@ -16,13 +16,13 @@ From: continuumio/anaconda3
     #bash /anaconda-install/anaconda.sh -b -p /usr/local
     #rm -rf /anaconda-install
     # labdata
-    conda install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
+    conda install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 pandas natsort -c pytorch -c nvidia
 
     pip install git+https://github.com/jcouto/labdata-tools.git@dev
     # spks
     #pip install ipython numpy pandas h5py scipy matplotlib
 
-    #pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
+    #pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2--index-url https://download.pytorch.org/whl/cu118
     pip install git+https://github.com/spkware/spks.git@dev
     # kilosort
     git clone https://github.com/spkware/package_kilosort2_5.git /opt/kilosort2_5

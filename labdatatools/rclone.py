@@ -180,7 +180,7 @@ Note:
     if remote is None:
         #print("Get data called but no remote provided. Going to get recursively from all remotes possible.")
         if 'archives' in labdata_preferences.keys():
-            remotes = labdata_preferences['archives']+[labdata_preferences['rclone']]
+            remotes = [labdata_preferences['rclone']] + labdata_preferences['archives']
         else:
             remotes = [labdata_preferences['rclone']]
         for r in remotes:
