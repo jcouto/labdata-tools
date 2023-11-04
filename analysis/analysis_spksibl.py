@@ -85,7 +85,6 @@ Joao Couto - October 2023
                 prbnumber = str(prbfolder)[-2]
                 if finalchar in ['a','b','c','d']: #if shanks were split by IBL
                     files = prbfolder.glob('*')
-                    files = files[files.name[-1] in ['a','b','c','d']]
                     for old_filename in files:
                         new_name = re.sub(f'imec[0-9][.]',f'imec{prbnumber}{finalchar}.', old_filename.name) 
                         new_filename = old_filename.parent / new_name
