@@ -163,7 +163,8 @@ Joao Couto - October 2023
             from pathlib import Path
             datapath = self.prefs['paths'][0]
             path2del = Path(datapath) / self.subject[0] / self.session[0]
-            path2del.rmtree() # delete the data for a failed job
+            import shutil
+            shutil.rmtree() # delete the data for a failed job
 
         if not len(results):
             self.upload = False
