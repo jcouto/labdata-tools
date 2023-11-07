@@ -2,7 +2,6 @@ import os
 from labdatatools.analysis import *
 import argparse
 
-from spks.spikeglx_utils import read_spikeglx_meta
 
 def recursive_map(f, it):
     return (recursive_map(f, x) if isinstance(x, tuple) else f(x) for x in it)
@@ -168,7 +167,7 @@ Joao Couto - October 2023
             datapath = self.prefs['paths'][0]
             path2del = Path(datapath) / self.subject[0] / self.session[0]
             import shutil
-            shutil.rmtree() # delete the data for a failed job
+            shutil.rmtree(path2del) # delete the data for a failed job
 
         if not len(results):
             self.upload = False
