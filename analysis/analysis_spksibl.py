@@ -161,13 +161,13 @@ Joao Couto - October 2023
                                                                                'probename': 'probe0'})
         except Exception as error:
             print("An exception occurred:", type(error).__name__, "–", error)
-            print("Deleting all local files:")
+            #print("Deleting all local files:")
 
-            from pathlib import Path
-            datapath = self.prefs['paths'][0]
-            path2del = Path(datapath) / self.subject[0] / self.session[0]
-            import shutil
-            shutil.rmtree(path2del) # delete the data for a failed job
+            #from pathlib import Path
+            #datapath = self.prefs['paths'][0]
+            #path2del = Path(datapath) / self.subject[0] / self.session[0]
+            #import shutil
+            #shutil.rmtree(path2del) # delete the data for a failed job
 
         if not len(results):
             self.upload = False
