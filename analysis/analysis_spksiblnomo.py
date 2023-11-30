@@ -2,7 +2,6 @@ import os
 from labdatatools.analysis import *
 import argparse
 
-from spks.spikeglx_utils import read_spikeglx_meta
 
 def recursive_map(f, it):
     return (recursive_map(f, x) if isinstance(x, tuple) else f(x) for x in it)
@@ -69,6 +68,7 @@ Joao Couto - October 2023
         import subprocess
         from pathlib import Path
         import re
+        from spks.spikeglx_utils import read_spikeglx_meta
         
 
         try:
