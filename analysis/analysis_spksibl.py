@@ -66,6 +66,12 @@ Joao Couto - October 2023
         self.tempdir = args.tempdir
         self.device = args.device
         self.motion_correction = args.no_ks_motion_correct
+
+        if self.motion_correction:
+            self.output_folder = 'spike_sorters/kilosort2.5'
+        else:
+            self.output_folder = 'spike_sorters/kilosort2.5_no_motion_corr'
+
     def _run(self):
         from spks.sorting import ks25_sort_multiprobe_sessions
         from spks.io import list_spikeglx_binary_paths
