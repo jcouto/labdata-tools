@@ -39,9 +39,9 @@ Joao Couto - October 2023
             self.input_folder = 'raw_ephys_data'
         
         # hard-code the excluded files from rclone transfer
-        self.excludes = ['**imec[0-9][a-z]*', # omit the files that get renamed
-                         '**.bin', #only use compressed files
+        self.excludes = ['**.bin', #only use compressed files
                          '**.lf*bin'] #ignore the lfp files
+                        # '**imec[0-9][a-z]*', # omit the files that get renamed
 
     def parse_arguments(self,arguments = []):
         parser = argparse.ArgumentParser(
