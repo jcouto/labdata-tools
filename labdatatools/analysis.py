@@ -113,9 +113,9 @@ class BaseAnalysisPlugin(object):
         if not self.datatypes == ['']: 
             cmd += ' -d {0}'.format(' '.join(self.datatypes))
         if not self.includes == []: 
-            cmd += ' -i {0}'.format(' '.join(self.includes))
+            cmd += ' -i {0}'.format(' '.join(['"{}"'.format(f) for f in self.includes]))
         if not self.excludes ==[]: 
-            cmd += ' -e {0}'.format(' '.join(self.excludes))
+            cmd += ' -e {0}'.format(' '.join(['"{}"'.format(f) for f in self.excludes]))
         if self.overwrite:
             cmd += ' --overwrite'
         if not self.partial_run is None:
