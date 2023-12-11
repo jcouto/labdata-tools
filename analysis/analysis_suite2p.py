@@ -6,7 +6,7 @@ class AnalysisSuite2p(BaseAnalysisPlugin):
                  session = None,
                  datatypes = [''],
                  includes = [''],
-                 excludes = [''],
+                 excludes = default_excludes,
                  bwlimit = None,
                  overwrite = False,
                  nplanes = None,
