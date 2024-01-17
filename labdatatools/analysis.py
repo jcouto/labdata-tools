@@ -14,10 +14,14 @@ def load_plugins():
     import sys
     sys.path.append(labdata_preferences['plugins_folder'])
     for f in analysis:
-        eval('exec("from {0} import Analysis{1}")'.format(
-            os.path.basename(f['file']).replace('.py',''),
-            f['name'].capitalize()))
-        f['object'] = eval("Analysis{0}".format(f['name'].capitalize()))
+        try:
+            eval('exec("from {0} import Analysis{1}")'.format(
+                os.path.basename(f['file']).replace('.py',''),
+                f['name'].capitalize()))
+            f['object'] = eval("Analysis{0}".format(f['name'].capitalize()))
+        except Exception as err:
+            print('Error loading the {0} plugin!'.format(f['name']))
+            print(err)
     return analysis
 
 class BaseAnalysisPlugin(object):
@@ -90,13 +94,14 @@ class BaseAnalysisPlugin(object):
         self.put_data()
 
     def submit(self, analysisargs,
-              conda_environment = None,
-              ntasks=None,
-              ncpuspertask = None,
-              memory=None,
-              walltime=None,
-              partition=None,
-              module=None):
+               conda_environment = None,
+               ntasks=None,
+               ncpuspertask = None,
+               memory=None,
+               ngpus = None,
+               walltime=None,
+               partition=None,
+               module=None):
         if self.has_gui:
             print('Command requires the gui... skipping.')
             return
@@ -108,13 +113,15 @@ class BaseAnalysisPlugin(object):
         if not self.datatypes == ['']: 
             cmd += ' -d {0}'.format(' '.join(self.datatypes))
         if not self.includes == []: 
-            cmd += ' -i {0}'.format(' '.join(self.includes))
+            cmd += ' -i {0}'.format(' '.join(['"{}"'.format(f) for f in self.includes]))
         if not self.excludes ==[]: 
-            cmd += ' -e {0}'.format(' '.join(self.excludes))
+            cmd += ' -e {0}'.format(' '.join(['"{}"'.format(f) for f in self.excludes]))
         if self.overwrite:
             cmd += ' --overwrite'
         if not self.partial_run is None:
             cmd += ' --partial {0}'.format(self.partial_run)
+        if self.delete_session is True:
+            cmd += ' --delete-session'
         if len(analysisargs):
             cmd += ' ' + ' '.join(analysisargs)    
         cmd = self.parse_slurm_cmd(cmd)
@@ -125,6 +132,7 @@ class BaseAnalysisPlugin(object):
                                     ncpuspertask = ncpuspertask,
                                     memory=memory,
                                     walltime=walltime,
+                                    gpus = ngpus,
                                     partition=partition,
                                     conda_environment=conda_environment,
                                     module_environment=module,
@@ -186,7 +194,7 @@ class BaseAnalysisPlugin(object):
                                                 bwlimit = self.bwlimit,
                                                 overwrite = self.overwrite,
                                                 excludes = self.excludes)        
-                    if res > 1:
+                    if res > 0:
                         print(f'rclone upload returned with error {res}')
                         continue
                     if self.delete_session:

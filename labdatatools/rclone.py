@@ -46,8 +46,9 @@ the first level of the folder hierarchy.
         remote = labdata_preferences['rclone']
         if 'archives' in labdata_preferences.keys():
             archivefiles = get_archived_list()
-            subjects = list(filter(lambda x:type(x) is str,
-                      archivefiles.subject.drop_duplicates().values))
+            if not archivefiles is None:
+                subjects = list(filter(lambda x:type(x) is str,
+                                       archivefiles.subject.drop_duplicates().values))
     out = check_output('rclone lsd {drive}:{folder}'.format(**remote).split(' ')).decode("utf-8")
     out = out.splitlines()
     subjects += [o.split(' ')[-1] for o in out]
@@ -62,8 +63,9 @@ def rclone_list_sessions(subject,remote = None):
         remote = labdata_preferences['rclone']
         if 'archives' in labdata_preferences.keys():
             archivefiles = get_archived_list()
-            sessions  = [i for i in archivefiles[
-                archivefiles.subject == subject].session.drop_duplicates().values]
+            if not archivefiles is None:
+                sessions  = [i for i in archivefiles[
+                    archivefiles.subject == subject].session.drop_duplicates().values]
 
     out = check_output(
         'rclone lsd {drive}:{folder}/{subject}'.format(
@@ -103,7 +105,10 @@ def rclone_list_files(subject = '', filters = [],
             cmd += ' --exclude "{0}"'.format(i)
 
     #print(cmd,flush=True)
-    out = check_output(cmd.split(' ')).decode("utf-8") #FIXME: this returns a nonzero exit status and a CalledProcessError if there are no directories found. Problematic when repeating over archives. 
+    try:
+        out = check_output(cmd.split(' ')).decode("utf-8") #FIXME: this returns a nonzero exit status and a CalledProcessError if there are no directories found. Problematic when repeating over archives.
+    except:
+        out = ''
     files = []
     for a in out.split('\n'):
         a = a.strip(' ').split(' ')
@@ -175,7 +180,7 @@ Note:
     if remote is None:
         #print("Get data called but no remote provided. Going to get recursively from all remotes possible.")
         if 'archives' in labdata_preferences.keys():
-            remotes = labdata_preferences['archives']+[labdata_preferences['rclone']]
+            remotes = [labdata_preferences['rclone']] + labdata_preferences['archives']
         else:
             remotes = [labdata_preferences['rclone']]
         for r in remotes:
@@ -257,6 +262,7 @@ def rclone_upload_data(subject='',
                        bwlimit = None,
                        max_transfer = None,
                        excludes = default_excludes,
+                       includes = [],
                        overwrite = False,
                        add_pacer_options = True,
                        check_archives = True,
@@ -296,6 +302,10 @@ def rclone_upload_data(subject='',
     if len(excludes):
         for i in excludes:
             command += ' --exclude "{0}"'.format(i)
+    if len(includes):
+        for i in includes:
+            command += ' --include "{0}"'.format(i)
+
     if check_archives:
         if 'archives' in labdata_preferences.keys():
             for a in labdata_preferences['archives']:

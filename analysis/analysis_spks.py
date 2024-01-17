@@ -48,19 +48,28 @@ Joao Couto - October 2023
         parser.add_argument('-d','--device',
                             action='store', default = 'cuda', type = str,
                             help = "Device for pytorch (cuda|cpu)")
+        parser.add_argument('-n','--no-ks-motion-correct',
+                            action='store_false', default = True,
+                            help = "Skip kilosort2.5 motion correction")
 
         args = parser.parse_args(arguments[1:])
         self.probe = args.probe
         self.tempdir = args.tempdir
         self.device = args.device
+        self.motion_correction = args.no_ks_motion_correct
 
     def _run(self):
         from spks.sorting import ks25_sort_multiprobe_sessions
         folders = self.get_sessions_folders()
+        use_precompiled = False
+        if 'LABDATA_CONTAINER' in os.environ.keys():
+            use_precompiled = True
         results = ks25_sort_multiprobe_sessions(folders,
                                                 temporary_folder=self.tempdir,
                                                 use_docker=False,
+                                                use_precompiled = use_precompiled,
                                                 device = self.device,
+                                                motion_correction = self.motion_correction,
                                                 sorting_results_path_rules=['..', '..', '{sortname}', '{probename}'],
                                                 sorting_folder_dictionary={'sortname': self.output_folder,
                                                                            'probename': 'probe0'})

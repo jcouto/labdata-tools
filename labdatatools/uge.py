@@ -33,18 +33,17 @@ def submit_uge_job(jobname,
     if partition == 'gpu' and module_environment is None:
         raise Exception('If you would like to use a GPU node, you need to specify a CUDA module to activate.')
 # TODO: Implement ntasks below
-    from datetime import datetime
-    rundate = "{:%Y_%m_%d_%H_%M_%S}".format(datetime.now())
+    #from datetime import datetime
+    #rundate = "{:%Y_%m_%d_%H_%M_%S}".format(datetime.now())
     ugejobfile = '''#!/bin/bash
 #$ -cwd
 # error = Merged with joblog
-#$ -o {logfolder}/{jobname}_{rundate}.stdout
+#$ -o {logfolder}/{jobname}_$JOB_ID.stdout
 #$ -j y
 '''.format(jobname=jobname,
            logfolder=LABDATA_UGE_FOLDER,
            ntasks=ntasks,
-           ncpus=ncpuspertask,
-           rundate=rundate)
+           ncpus=ncpuspertask)
     ugejobfile += '#$ -l '
     if walltime is not None:
         ugejobfile += 'h_rt={},'.format(walltime)

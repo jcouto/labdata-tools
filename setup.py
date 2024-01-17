@@ -61,6 +61,9 @@ if 'install' in sys.argv or 'develop' in sys.argv:
     for fname in os.listdir('analysis'):
         fpath = os.path.join('analysis', fname)
         if not os.path.exists(pjoin(plugins,fname)):
-            shutil.copy(fpath, plugins)
+            try:
+                shutil.copy(fpath, plugins)
+            except:
+                pass
         else:
             print('File already exists.')
