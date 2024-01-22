@@ -133,29 +133,32 @@ def rclone_list_files(subject = '', filters = [],
                     session = tmp[0+s]
                     if len(tmp)>=s+2:
                         datatype = tmp[1+s]
-            include = False
-            for inn in filters:
-                if inn in fname:
-                    include = True
-            if not len(filters):
-                include = True
             if datatype is None: # for files on the session level
                  datatype = '.'
-            if include:
-                files.append(dict(filename=os.path.basename(fname),
-                                  filesize = int(sz),
-                                  filepath = fname,
-                                  dirname = dirname,
-                                  subject = sub,
-                                  session = session,
-                                  datatype = datatype,
-                                  remote_drive = remote['drive'],
-                                  remote_folder = remote['folder']))
+            files.append(dict(filename=os.path.basename(fname),
+                              filesize = int(sz),
+                              filepath = fname,
+                              dirname = dirname,
+                              subject = sub,
+                              session = session,
+                              datatype = datatype,
+                              remote_drive = remote['drive'],
+                              remote_folder = remote['folder']))
+            
     if len(archivefiles):
         files = pd.concat([archivefiles,pd.DataFrame(files)])
-
     else:
         files = pd.DataFrame(files)
+    if len(files) and len(filters):
+        idx = []
+        for filt in filters:
+
+            for i,fname in enumerate(files.filepath.values):
+                if filt in fname:
+                    idx.append(i)
+        idx = np.unique(idx)
+        files = files.iloc[idx]
+            
     return files
 
 def rclone_get_data(path_format = None,
