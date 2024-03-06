@@ -42,10 +42,10 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         parser = argparse.ArgumentParser(
                 description = '''
                     Identification of individual neurons in calium imaging data.
-                    Actions are: create,  downsample_videos, motion_correction, spatiotemporal_correlation, run_cnmfe, curate
+                    Actions are: create, caiman_pipeline, curate
                     Note that the -- create method generates a parameters file that will be used for all the analysis steps and that can be edited manually by the user.
                     ''',
-                usage = 'caiman -a <subject> -s <session> -d <datatype> -- create|downsample_videos|motion_correction|spatiotemporal_correlation|run_cnmfe|curate <PARAMETERS>')
+                usage = 'caiman -a <subject> -s <session> -d <datatype> -- create|caiman_pipeline|curate <PARAMETERS>')
 
         parser.add_argument('action',
                             action='store', type=str, help = "Input action to perform, see above.")
@@ -61,18 +61,12 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         if self.action == 'create': #Method to generate a parameter file. This has to be run before anything else.
             self._run = self._run_create
-        elif self.action == 'downsample_videos':
-            self._run = self._run_downsampling
-        elif self.action == 'motion_correction':
-            self._run = self._run_motion_correction
-        elif self.action == 'spatiotemporal_correlation':
-            self._run = self._run_spatiotemporal_correlation
-        elif self.action == 'run_cnmfe':
-            self._run = self._run_cnmfe
+        elif self.action == 'caiman_pipeline':
+            self._run = self._run_caiman_pipeline
         elif self.action == 'curate':
             self._run = self._run_curate
         else:
-            raise(ValueError('Available command are: create, downsample_videos, motion_correction, spatiotemporal_correlation, run_cnmfe.'))
+            raise(ValueError('Available command are: create, caiman_pipeline, curate.'))
 #---------------------------------------------------------------------------
     
     def load_caiman_params(self):
@@ -156,12 +150,22 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             json.dump(caiman_params, fd, indent=True)
 #--------------------------------------------------------------------------
 
-    def _run_downsampling(self): #UNDER CONSTRUCTION! Spatially downsample .avi file
-        '''Spatially bin the movies'''
+    def _run_caiman_pipeline(self): #UNDER CONSTRUCTION! Spatially downsample .avi file
+        '''Run the entire caiman analysis. This includes first spatially down-sampling
+        the videos if desired, correcting for movement artificats on the movies, calculating
+        summary images (spatio-temporal correlation and peak-to-noise ratio) and then
+        actually running cnmfe on the data.'''
         #TODO: create a simlink to the original movies if the scaling_factor is 1.
 
         from time import time # For time logging
-        
+        import caiman as cm
+        from caiman.motion_correction import MotionCorrect
+        from caiman.source_extraction.cnmf import params as params
+        from caiman.source_extraction import cnmf
+        import numpy as np
+        from tqdm import tqdm #For time progress bar
+
+
         session_folder = self.get_sessions_folders() #Go thorugh the folders
         fnames = sorted(glob(os.path.join(session_folder[0], self.datatypes[0], '*.avi'))) #These are the complete video paths
         output_folder = pjoin(session_folder[0], self.name) #Set path directory to caiman folder
@@ -238,24 +242,17 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         
         print(f'Video binning done in {round(time() - preproc_t)} seconds')
         print('------------------------------------------------')
-#-----------------------------------------------------------------------
+        
+        #-----------------------------------------------------------------------
+        #'''Perform image registration to correct for image shifts due to
+        #movements of the field of view'''
 
-    def _run_motion_correction(self):
-        '''Perform image registration to correct for image shifts due to
-        movements of the field of view'''
 
-        import caiman as cm
-        from caiman.motion_correction import MotionCorrect
-        from caiman.source_extraction.cnmf import params as params
-        from time import time # For timne logging
-        import numpy as np
-
-        #File Selection:
-        session_folder = self.get_sessions_folders() #Go thorugh the folders
+        ##File Selection:
+        #session_folder = self.get_sessions_folders() #Go thorugh the folders
         fnames = sorted(glob(pjoin(session_folder[0], self.name, 'binned_*.avi')))
 
-        #Load and initialize parameters
-        caiman_params = self.load_caiman_params()
+        #Retrieve motion correction parameters
         opts = params.CNMFParams(params_dict = caiman_params['motion_correction_params'])
 
         #Start a cluster with the specified number of workers
@@ -289,10 +286,10 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         #Save the Shift Data from Motion Correction:
         rigid_shifts = np.array(mc.shifts_rig) # Retrieve shifts from mc object
-        output_folder = pjoin(session_folder[0], self.name) #Set path directory to same location as data
-        self.output_folder = self.name #Here this means the datatype folder only
-        if not os.path.exists(output_folder):
-            os.mkdir(output_folder)
+        #output_folder = pjoin(session_folder[0], self.name) #Set path directory to same location as data
+        #self.output_folder = self.name #Here this means the datatype folder only
+        #if not os.path.exists(output_folder):
+        #    os.mkdir(output_folder)
 
         np.save(pjoin(output_folder, 'motion_correction_shifts'), rigid_shifts) #Save the np array to npy file
         dview.terminate() #Terminate the processes
@@ -305,24 +302,11 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         c_files.remove(mc_movie_file)
         for f in c_files:
             os.remove(f) #Now also delete all the C ordered files that annoyingly also get created with the last call to save_mmap!
-#---------------------------------------------------------------------------
 
-    def _run_spatiotemporal_correlation(self):
-        '''Calculate median projection, spatiotemporal correlation and peak-to-noise ratio images. These are useful when possibly aligning one session to the other later on'''
+        #---------------------------------------------------------------------------
+        #'''Calculate median projection, spatiotemporal correlation and peak-to-noise ratio images. These are useful when possibly aligning one session to the other later on'''
 
-        import caiman as cm
-        from caiman.source_extraction.cnmf import params as params
-        from time import time # For time logging
-        import numpy as np
-        from tqdm import tqdm #For time progress bar
-
-        #File Selection:
-        session_folder = self.get_sessions_folders() #Go thorugh the folders
-        output_folder = pjoin(session_folder[0], self.name) #Set output path directory to same location as data
-        self.output_folder = self.name #Here this means the datatype folder only
-        
-        #Load and initialize parameters
-        caiman_params = self.load_caiman_params()
+        #Set the caiman pramaeters
         opts = params.CNMFParams(params_dict = caiman_params['cnmfe_params'])
 
         mc_movie_file = glob(pjoin(session_folder[0], self.name, '*.mmap'))[0] #Load mmap file with order C.
@@ -352,30 +336,16 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
 #-------------------------------------------------------------------------
 
-#TODO: Should the spatiotemporal correlation and the cnmfe be merged together?
-    def _run_cnmfe(self): #Seperate spatiotemporal correlation analysis and cnmfe
-        '''Run the cnmfe model'''
-    
-        import caiman as cm
-        from caiman.source_extraction import cnmf
-        from caiman.source_extraction.cnmf import params as params
-        import numpy as np
-        from time import time # For time logging
-        
-        #Get the respective session folder
-        session_folder = self.get_sessions_folders() #Go thorugh the folders
-        output_folder = pjoin(session_folder[0], self.name) #Set output path directory to same location as data
-        self.output_folder = self.name #Here this means the datatype folder only
+        #'''Run the cnmfe model'''
 
-        #Load and initialize parameters
-        caiman_params = self.load_caiman_params()
+        #Use cnmfe params
         opts = params.CNMFParams(params_dict = caiman_params['cnmfe_params'])
         
-        #Load the data
-        mc_movie_file = glob(pjoin(session_folder[0], self.name, '*.mmap'))[0] #Load mmap file with order C.
+        #Load the data (obsolete)
+        #mc_movie_file = glob(pjoin(session_folder[0], self.name, '*.mmap'))[0] #Load mmap file with order C.
        
-        Yr, dims, T = cm.load_memmap(mc_movie_file, mode='r+')
-        images = Yr.T.reshape((T,) + dims, order='F')
+        #Yr, dims, T = cm.load_memmap(mc_movie_file, mode='r+')
+        #images = Yr.T.reshape((T,) + dims, order='F')
         opts.change_params(params_dict = {'dims': dims})
         
         c, dview, n_processes = cm.cluster.setup_cluster(backend = 'local',
@@ -403,7 +373,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         dview.terminate()
 
 #-------------------------------------------------------------------------
-    
+
+#-----------------------------------------------------------------------------    
     def _run_curate(self):
         '''Select good neurons and reject noise components and unclear cells'''
         
