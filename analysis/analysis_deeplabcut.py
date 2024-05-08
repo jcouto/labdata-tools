@@ -389,7 +389,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         project_folder = configpath.replace('/config.yaml', '')
         if not os.path.exists(configpath):
             print('No project found, create it first.')
-        labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'))[0]
+        labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'+self.video_filter+'*'))[0]
         from deeplabcut.gui.widgets import launch_napari
         import napari
         launch_napari([labeled_data_folder, configpath])
