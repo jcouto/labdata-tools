@@ -59,7 +59,7 @@ Joao Couto - October 2023
         self.motion_correction = args.no_ks_motion_correct
 
     def _run(self):
-        from spks.sorting import ks25_sort_multiprobe_sessions
+        from spks.sorting import sort_multiprobe_sessions
         folders = self.get_sessions_folders()
         use_precompiled = False
         if 'LABDATA_CONTAINER' in os.environ.keys():
