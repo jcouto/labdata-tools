@@ -66,8 +66,6 @@ Joao Couto - October 2023
             use_precompiled = True
         results = sort_multiprobe_sessions(folders,
                                            temporary_folder=self.tempdir,
-                                           use_docker=False,
-                                           use_precompiled = use_precompiled,
                                            device = self.device,
                                            motion_correction = self.motion_correction,
                                            sorting_results_path_rules=['..', '..', '{sortname}', '{probename}'],
