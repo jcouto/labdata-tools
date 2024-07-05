@@ -164,10 +164,12 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         from caiman.source_extraction import cnmf
         import numpy as np
         from tqdm import tqdm #For time progress bar
+        from natsort import natsorted
 
 
         session_folder = self.get_sessions_folders() #Go thorugh the folders
-        fnames = sorted(glob(os.path.join(session_folder[0], self.datatypes[0], '*.avi'))) #These are the complete video paths
+        fnames = natsorted(glob(os.path.join(session_folder[0], self.datatypes[0], '*.avi'))) #These are the complete video paths
+        print(f'{fnames}')
         output_folder = pjoin(session_folder[0], self.name) #Set path directory to caiman folder
         self.output_folder = self.name #Here this means the datatype folder only
         if not os.path.exists(output_folder):
@@ -250,7 +252,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         ##File Selection:
         #session_folder = self.get_sessions_folders() #Go thorugh the folders
-        fnames = sorted(glob(pjoin(session_folder[0], self.name, 'binned_*.avi')))
+        fnames = natsorted(glob(pjoin(session_folder[0], self.name, 'binned_*.avi')))
 
         #Retrieve motion correction parameters
         opts = params.CNMFParams(params_dict = caiman_params['motion_correction_params'])
@@ -371,6 +373,9 @@ class AnalysisCaiman(BaseAnalysisPlugin):
 
         # Shuts down parallel pool
         dview.terminate()
+        del cnm #This might be helpful because reloading this object when it is already present takes more than 10x times as long
+        del Yr
+        del images
 
 #-------------------------------------------------------------------------
 
@@ -382,6 +387,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         from caiman.source_extraction import cnmf
         from caiman.source_extraction.cnmf.cnmf import load_CNMF #To load the object with its attributes and methods
         from caiman.source_extraction.cnmf import params as params
+        from os.path import split
+        from time import time
         
         #Start with defining the main functions for the selection GUI...
         
@@ -503,12 +510,12 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             # Load  retrieve the data and load the binary movie file
             A, C, S, F, image_dims, frame_rate, neuron_num, recording_length, movie_file, spatial_spMat = retrieve_caiman_estimates(data_source)
             
-            # Load the motion corrected movie (memory mapped)
-            Yr = np.memmap(movie_file, mode='r', shape=(image_dims[0] * image_dims[1], recording_length),
-                        order='C', dtype=np.float32)
-            # IMPORTANT: Pick the C-ordered version of the file and specify the dtype as np.float32 (!!!)
-            movie = Yr.T.reshape(recording_length, image_dims[0], image_dims[1], order='F') # Reorder the same way as they do in caiman
-            del Yr # No need to keep this one...
+            # Load the motion corrected movie fully into RAM
+            print('Start loading the movie. This may take a moment...')
+            ti = time()
+            Yr = np.fromfile(movie_file, np.float32)
+            movie = np.reshape(Yr,(image_dims[0], image_dims[1], recording_length)).transpose(1,0,2)
+            print(f'Loaded in {time() - ti} seconds')
                 
             #----Initialize the list of booleans for good neurons and a list with the indices    
             accepted_components = [None] * neuron_num # Create a list of neurons you want to keep or reject
@@ -580,7 +587,8 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             display_frame, frame_range = adjust_display_range(display_time, display_window, frame_rate, recording_length)
             
             #First the corrected movie with contour
-            movie_frame = movAx.imshow(movie[display_frame,:,:], cmap='gray', vmin=0, vmax=np.max(movie)) #FIxate the display range here
+            movie_frame = movAx.imshow(movie[:,:,display_frame], cmap='gray', vmin=0, vmax=255) #The upper limit of pixel values
+            #print(f'Plotted movie frame in {time() -st} seconds')
             neuron_mask = A[:,:,current_neuron] > 0 #Theshold to get binary mask
             neuron_contour = movAx.contour(neuron_mask, linewidths=0.5) #Overlay binary mask on movie frame
             
@@ -638,7 +646,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
             def frame_slider_update(val):
                 
                 display_frame, frame_range = adjust_display_range(val, display_window, frame_rate, recording_length)
-                movie_frame.set_data(movie[display_frame,:,:])
+                movie_frame.set_data(movie[:,:,display_frame])
                 
                 mask_image.set_data(A[:,:,current_neuron] * pixel_intensity_scaling * np.abs(C[current_neuron,display_frame]))
                 
@@ -689,10 +697,10 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                 display_frame, frame_range = adjust_display_range(display_time, display_window, frame_rate, recording_length)
                 
                 #Adjust frame slider
-                frame_slider.set_val(display_time)
+                #frame_slider.set_val(display_time)
                 
                 #Jump to the respective movie frame
-                #movie_frame.set_data(movie[display_frame,:,:])
+                movie_frame.set_data(movie[:,:,display_frame])
                 
                 #Update the contour on the already displayed frame
                 #Need to remove the contours first, unfortunately
@@ -763,6 +771,7 @@ class AnalysisCaiman(BaseAnalysisPlugin):
         
         #Now process the data   
         session_folder = self.get_sessions_folders() #Go thorugh the folders
+        print(session_folder)
         output_folder = pjoin(session_folder[0], self.name) #Set output path directory to same location as data
         self.output_folder = self.name #Here this means the datatype folder only
         caiman_obj = load_CNMF(pjoin(output_folder, 'uncurated_caiman_results.hdf5'))
