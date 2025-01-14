@@ -704,11 +704,12 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                 
                 #Update the contour on the already displayed frame
                 #Need to remove the contours first, unfortunately
-                for tp in neuron_contour.collections: 
-                    tp.remove()
-                        
+                #for tp in neuron_contour.collections: 
+                #    tp.remove()
+                neuron_contour.remove()
+
                 neuron_mask = A[:,:,current_neuron] > 0
-                neuron_contour = movAx.contour(neuron_mask, linewidths=0.5)
+                neuron_contour = movAx.contour( neuron_mask, linewidths=0.5)
         
                 #Update the denoised plot
                 pixel_intensity_scaling = 1/np.max(A[:,:,current_neuron])
