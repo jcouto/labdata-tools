@@ -357,7 +357,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         configpath = self.get_project_folder()
         if not os.path.exists(configpath):
             print('No project found, create it first.')
-        # labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'))[0]
         import deeplabcut as dlc
         import napari
         if self.session is not self.labeling_session:
@@ -377,8 +376,9 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                 new_video = self.get_video_path()
                 dlc.add_new_videos(configpath, new_video, copy_videos=False, coords=None, extract_frames=True)
         else:
-            # from deeplabcut.gui.widgets import launch_napari
-            # launch_napari([labeled_data_folder, configpath])
+            from deeplabcut.gui.widgets import launch_napari
+            labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'+self.video_filter+'*'))[0]
+            launch_napari([labeled_data_folder, configpath])
             dlc.extract_frames(configpath,
                            **self.extractparams)
             napari.run()
