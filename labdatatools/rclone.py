@@ -66,12 +66,14 @@ def rclone_list_sessions(subject,remote = None):
             if not archivefiles is None:
                 sessions  = [i for i in archivefiles[
                     archivefiles.subject == subject].session.drop_duplicates().values]
-
-    out = check_output(
-        'rclone lsd {drive}:{folder}/{subject}'.format(
-            **remote,
-            subject = subject).split(' ')).decode("utf-8")
-    out = out.splitlines()
+    try:
+        out = check_output(
+            'rclone lsd {drive}:{folder}/{subject}'.format(
+                **remote,
+                subject = subject).split(' ')).decode("utf-8")
+        out = out.splitlines()
+    except:
+        out = []
     sessions += [o.split(' ')[-1] for o in out]
     if len(sessions):
         return np.unique(sessions)
