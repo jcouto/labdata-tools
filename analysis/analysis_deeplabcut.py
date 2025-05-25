@@ -272,7 +272,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         import tkinter as tk
         from tkinter.filedialog import askopenfilename, asksaveasfilename
         import tkinter.messagebox as messagebox
-
+s
         def open_file():
             """Open a file for editing."""
             filepath = configpath
@@ -367,8 +367,14 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             print(future_new_video_path)
             if future_new_video_path.is_file():
                 print('Video has already been added to the project. Proceeding with extraction.')
-                dlc.extract_frames(configpath, **self.extractparams)
-                napari.run()
+                if self.extract_params['extract_mode'] == 'manual':
+                    from deeplabcut.gui.widgets import launch_napari
+                    labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'+self.video_filter+'*'))[0]
+                    launch_napari([labeled_data_folder, configpath])
+                    napari.run()
+                else:
+                    dlc.extract_frames(configpath,
+                                   **self.extractparams)
                 self.overwrite = True
             else:
                 print('Video has not been added to the project.\
@@ -376,12 +382,15 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                 new_video = self.get_video_path()
                 dlc.add_new_videos(configpath, new_video, copy_videos=False, coords=None, extract_frames=True)
         else:
-            from deeplabcut.gui.widgets import launch_napari
-            labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'+self.video_filter+'*'))[0]
-            launch_napari([labeled_data_folder, configpath])
-            dlc.extract_frames(configpath,
-                           **self.extractparams)
-            napari.run()
+            if self.extract_params['extract_mode'] == 'manual':
+                from deeplabcut.gui.widgets import launch_napari
+                labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'+self.video_filter+'*'))[0]
+                launch_napari([labeled_data_folder, configpath])
+                napari.run()
+            else:
+                dlc.extract_frames(configpath,
+                                   **self.extractparams)
+            
             self.overwrite = True
 
     def _label_frames(self):
