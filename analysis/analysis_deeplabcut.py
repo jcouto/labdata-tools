@@ -272,7 +272,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         import tkinter as tk
         from tkinter.filedialog import askopenfilename, asksaveasfilename
         import tkinter.messagebox as messagebox
-        
+
         def open_file():
             """Open a file for editing."""
             filepath = configpath
@@ -355,11 +355,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         import os
         from pathlib import Path
         configpath = self.get_project_folder()
-<<<<<<< Updated upstream
-        project_folder = configpath.replace('/config.yaml', '')
-=======
         # project_folder = configpath.replace('/config.yaml', '')
->>>>>>> Stashed changes
         if not os.path.exists(configpath):
             print('No project found, create it first.')
         import deeplabcut as dlc
@@ -373,21 +369,11 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             print(future_new_video_path)
             if future_new_video_path.is_file():
                 print('Video has already been added to the project. Proceeding with extraction.')
-<<<<<<< Updated upstream
-                if self.extractparams['mode'] == 'manual':
-                    from deeplabcut.generate_training_dataset.frame_extraction import extract_frames
-                    extract_frames(config=configpath, mode=self.extractparams['mode'])
-                    napari.run()
-                else:
-                    dlc.extract_frames(configpath,
-                                   **self.extractparams)
-=======
                 if self.extractparams['mode'] == 'automatic':
                     dlc.extract_frames(configpath, **self.extractparams)
                     napari.run()
                 elif self.extractparams['mode'] == 'manual':
                     print('Manual labeling is currently not supported in labdata-tools DLC. Please launch the DLC GUI for this step.')
->>>>>>> Stashed changes
                 self.overwrite = True
             else:
                 print('Video has not been added to the project.\
@@ -403,17 +389,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                     print('Manual labeling is currently not supported in labdata-tools DLC. Please launch the DLC GUI for this step.')
                 self.overwrite = True
         else:
-<<<<<<< Updated upstream
-            if self.extractparams['mode'] == 'manual':
-                from deeplabcut.gui.widgets import launch_napari
-                labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'+self.video_filter+'*'))[0]
-                launch_napari(self.get_video_path()[0])
-                napari.run()
-            else:
-                dlc.extract_frames(configpath,
-                                   **self.extractparams)
-            
-=======
             print('Video has already been added to the project. Proceeding with extraction.')
             if self.extractparams['mode'] == 'automatic':
                 dlc.extract_frames(configpath,
@@ -430,7 +405,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
                 # _ = launch_napari(files = self.get_video_path())
                 # napari.run()
                 print('Manual labeling is currently not supported in labdata DLC. Please launch the DLC GUI for this step.')
->>>>>>> Stashed changes
             self.overwrite = True
 
     def _label_frames(self):
