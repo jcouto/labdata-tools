@@ -367,7 +367,6 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         if not os.path.exists(configpath):
             print('No project found, create it first.')
         import deeplabcut as dlc
-        import napari
         if self.session[0] is not self.labeling_session:
             print('Checking if new labeling session video has already been added to the project...')
             future_new_video = Path(self.get_video_path()[0])
@@ -378,47 +377,36 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
             if future_new_video_path.is_file():
                 print('Video has already been added to the project. Proceeding with extraction.')
                 if self.extractparams['mode'] == 'automatic':
-                    dlc.extract_frames(configpath, **self.extractparams)
-                    napari.run()
+                    dlc.extract_frames(configpath, 
+                                       **self.extractparams)
                 elif self.extractparams['mode'] == 'manual':
-                    print('Manual labeling is currently not supported in labdata-tools DLC. Please launch the DLC GUI for this step.')
-                self.overwrite = True
+                    frame_extraction_gui(video_path=self.get_video_path()[0], 
+                                         project_path=project_folder)
             else:
                 print('Video has not been added to the project.\
                       Adding it to project now.')
                 new_video = self.get_video_path()
-                dlc.add_new_videos(configpath, new_video, copy_videos=False, coords=None, extract_frames=True)
+                dlc.add_new_videos(configpath, 
+                                   new_video, 
+                                   copy_videos=False, 
+                                   coords=None, 
+                                   extract_frames=False)
 
                 print('Video has now been added. Proceeding with extraction.')
                 if self.extractparams['mode'] == 'automatic':
-                    dlc.extract_frames(configpath, **self.extractparams)
-                    napari.run()
+                    dlc.extract_frames(configpath, 
+                                       **self.extractparams)
                 elif self.extractparams['mode'] == 'manual':
-                    print('Manual labeling is currently not supported in labdata-tools DLC. Please launch the DLC GUI for this step.')
-                self.overwrite = True
+                    frame_extraction_gui(video_path=self.get_video_path()[0], 
+                                         project_path=project_folder)
         else:
             print('Video has already been added to the project. Proceeding with extraction.')
             if self.extractparams['mode'] == 'automatic':
                 dlc.extract_frames(configpath,
-                            **self.extractparams)
+                                   **self.extractparams)
             elif self.extractparams['mode'] == 'manual':
-                """
-                TODO:
-                - on top of loading the video extremely slow, DLC also expects the labeled-data dir to be up one folder from where the video is
-                - this is a problem because the project lives in a separate folder from the video (symlink to chipmunk folder vs. real video in videos folder)
-                - one solution would be to modify the extract frames function in napari-deeplabcut to work with our labdata DLC structure
-                - but that would potentially break normal GUI function. for now, let's tell the user they can't do manual extraction through this CLI.
-                """
-                import sys
-                import os
-                sys.path.append('/home/gabriel/lib/labdata-tools/analysis')
-                # from dlc_manual_frame_extraction import frame_extraction_gui
-                frame_extraction_gui(video_path=self.get_video_path()[0], project_path=project_folder)
-                # from deeplabcut.gui.widgets import launch_napari
-                # _ = launch_napari(files = self.get_video_path())
-                # napari.run()
-                # print('Manual labeling is currently not supported in labdata DLC. Please launch the DLC GUI for this step.')
-            # self.overwrite = True
+                frame_extraction_gui(video_path=self.get_video_path()[0], 
+                                     project_path=project_folder)
 
     def _label_frames(self):
         configpath = self.get_project_folder()
