@@ -274,11 +274,8 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         configpath = self.get_project_folder()
         if not os.path.exists(configpath):
             print('No project found, create it first.')
-        # import deeplabcut as dlc
-        # dlc.auxiliaryfunctions.edit_config(configpath, self.edit_config_params)
-        # print(f'Config file edited. New parameters for extraction are: {self.edit_config_params}')  
+
         import tkinter as tk
-        from tkinter.filedialog import askopenfilename, asksaveasfilename
         import tkinter.messagebox as messagebox
 
         def open_file():
@@ -308,7 +305,7 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         window.rowconfigure(0, minsize=800, weight=1)
         window.columnconfigure(1, minsize=800, weight=1)
 
-        txt_edit = tk.Text(window)
+        txt_edit = tk.Text(window, undo=True, autoseparators=True, maxundo=-1)
         fr_buttons = tk.Frame(window, relief=tk.RAISED, bd=2)
         btn_save = tk.Button(fr_buttons, text="Save", command=save_file)
 
@@ -316,17 +313,9 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         fr_buttons.grid(row=0, column=0, sticky="ns")
         txt_edit.grid(row=0, column=1, sticky="nsew")
 
-        # the following lines aren't working yet
-
-        # # Undo and Redo binds for Windows and Linux
-        # txt_edit.bind("<Control-z>", lambda event: txt_edit.edit_undo())
-        # txt_edit.bind("<Control-y>", lambda event: txt_edit.edit_redo())
-
-        # # Undo and Redo binds for Mac
-        # txt_edit.bind("<Command-z>", lambda event: txt_edit.edit_undo())
-        # txt_edit.bind("<Command-Shift-z>", lambda event: txt_edit.edit_redo())
-
         open_file()
+
+        txt_edit.edit_reset()
 
         window.mainloop()
 
@@ -414,14 +403,10 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         if not os.path.exists(configpath):
             print('No project found, create it first.')
         labeled_data_folder = glob(pjoin(project_folder, 'labeled-data', '*'+self.session[0]+'*'+self.video_filter+'*'))[0]
-        #TODO: try using the built-in labeling function
         import deeplabcut as dlc
-        dlc.label_frames(config_path=configpath)
-        # from deeplabcut.gui.widgets import launch_napari
+        dlc.label_frames([labeled_data_folder, configpath]) #calling it like this helps avoid duplicate data layers in napari
         import napari
-        # launch_napari([labeled_data_folder, configpath])
         napari.run()
-        self.overwrite = True
 
     def _train_dlc(self):
         configpath = self.get_project_folder()
