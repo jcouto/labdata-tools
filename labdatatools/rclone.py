@@ -72,9 +72,9 @@ def rclone_list_sessions(subject,remote = None):
                 **remote,
                 subject = subject).split(' ')).decode("utf-8")
         out = out.splitlines()
-        sessions += [o.split(' ')[-1] for o in out]
     except:
-        pass
+        out = []
+    sessions += [o.split(' ')[-1] for o in out]
     if len(sessions):
         return np.unique(sessions)
     else:
