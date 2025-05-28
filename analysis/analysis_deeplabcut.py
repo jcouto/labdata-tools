@@ -275,49 +275,9 @@ Actions are: create, template, edit, extract, label, train, evaluate, run, video
         if not os.path.exists(configpath):
             print('No project found, create it first.')
 
-        import tkinter as tk
-        import tkinter.messagebox as messagebox
-
-        def open_file():
-            """Open a file for editing."""
-            filepath = configpath
-            if not filepath:
-                return
-            txt_edit.delete(1.0, tk.END)
-            with open(filepath, "r") as input_file:
-                text = input_file.read()
-                txt_edit.insert(tk.END, text)
-            window.title(f"Editor - {filepath}")
-
-        def save_file():
-            """Save the current file as a new file."""
-            filepath = configpath
-            if not filepath:
-                return
-            with open(filepath, "w") as output_file:
-                text = txt_edit.get(1.0, tk.END)
-                output_file.write(text)
-            window.title(f"Editor - {filepath}")
-            messagebox.showinfo(title="Saved", message="File saved successfully.")
-
-
-        window = tk.Tk()
-        window.rowconfigure(0, minsize=800, weight=1)
-        window.columnconfigure(1, minsize=800, weight=1)
-
-        txt_edit = tk.Text(window, undo=True, autoseparators=True, maxundo=-1)
-        fr_buttons = tk.Frame(window, relief=tk.RAISED, bd=2)
-        btn_save = tk.Button(fr_buttons, text="Save", command=save_file)
-
-        btn_save.grid(row=1, column=0, sticky="ew", padx=5)
-        fr_buttons.grid(row=0, column=0, sticky="ns")
-        txt_edit.grid(row=0, column=1, sticky="nsew")
-
-        open_file()
-
-        txt_edit.edit_reset()
-
-        window.mainloop()
+        import subprocess
+        print("Waiting for code window to close before terminating the process...")
+        subprocess.run(["code", "--wait", configpath])
 
     def get_project_videos_path(self):
         self.session_folders = self.get_sessions_folders()
