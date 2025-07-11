@@ -702,11 +702,11 @@ class AnalysisCaiman(BaseAnalysisPlugin):
                 #Jump to the respective movie frame
                 movie_frame.set_data(movie[:,:,display_frame])
                 
-                #Update the contour on the already displayed frame
-                #Need to remove the contours first, unfortunately
-                #for tp in neuron_contour.collections: 
-                #    tp.remove()
-                neuron_contour.remove()
+                # Update the contour on the already displayed frame
+                # Need to remove the contours first, unfortunately
+                for tp in neuron_contour.collections: 
+                    tp.remove()
+                #neuron_contour.remove()
 
                 neuron_mask = A[:,:,current_neuron] > 0
                 neuron_contour = movAx.contour( neuron_mask, linewidths=0.5)
