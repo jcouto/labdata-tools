@@ -122,7 +122,7 @@ Gabriel Rojas Bowe, Joao Couto - 2021
         args = parser.parse_args(arguments[1:])
 
         self.labeling_session = args.label_session
-        self.labeling_subject = args.label_subjects
+        self.labeling_subject = args.label_subject
         self.example_config = args.example_config
         self.training_iterations = args.training_iterations
         self.trailpoints = args.trailpoints
