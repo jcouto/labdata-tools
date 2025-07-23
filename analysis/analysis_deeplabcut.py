@@ -56,52 +56,77 @@ Gabriel Rojas Bowe, Joao Couto - 2021
 
     def parse_arguments(self,arguments = []):
         parser = argparse.ArgumentParser(
-            description = '''
-Animal pose analysis.
-Actions are: create, template, edit, extract, label, train, evaluate, run, video, verify, outlier, refine, merge
-''',
+            description = 
+                '''
+                Animal pose analysis.
+                Actions are: create, template, edit, extract, label, train, evaluate, run, video, verify, outlier, refine, merge
+                ''',
             usage = 'deeplabcut -a <subject> -s <session> -d <datatype> -- create|template|edit|extract|label|train|evaluate|run|video|verify|outlier|refine|merge <PARAMETERS>')
 
         parser.add_argument('action',
                             action='store', type=str, help = "action to perform (CREATE project, use config TEMPLATE, EDIT extraction parameters in config file, EXTRACT frames, manual LABEL frames,\
                             TRAIN the network, EVALUATE the trained network's performance, RUN the analysis on a dataset,\
                              create labeled VIDEO (overwrites existing video), VERIFY model performance, extract OUTLIER frames, REFINE outlier frames, MERGE datasets for retraining after refining)")
-        parser.add_argument('--training-iterations', action='store', default=300000, type=int, help = "Specify number (integer) of iterations you want the model to train for. Default is 300,000")
+        
+        parser.add_argument('--training-iterations', 
+                            action='store', default=300000, type=int, help = "Specify number (integer) of iterations you want the model to train for. Default is 300,000")
+        
         parser.add_argument('--label-subject',
                             action='store', default=None, type=str, help = "specity subject used for initial labeling (used when analyzing new videos)")
+        
         parser.add_argument('--label-session',
                             action='store', default=None, type=str, help = "specify session used for initial labeling (used when analyzing new videos)")
+        
         parser.add_argument('-c','--example-config',
                             action='store', default='headfixed_side', type=str)
+        
         parser.add_argument('--start',
                             action='store', default=0, type=float, help = "specify start frame for extracting outlier frames")
+        
         parser.add_argument('--stop',
                             action='store', default=1, type=float, help = "specify stop frame for extracting outlier frames")
-        parser.add_argument('--numframes2pick',
+        
+        parser.add_argument('--numframes2pick', 
                             action='store', default=10, type=int, help = "specify number of frames to extract for labeling")
-        parser.add_argument('-f','--video-filter',
-                            action='store', default='cam0',
-                            type=str,
-                            help = "indicate which video to load: cam0 (default) for lateral view and cam1 for bottom view")
-        parser.add_argument('--video-extension',
+        
+        parser.add_argument('-f','--video-filter', 
+                            action='store', default='cam0', type=str, help = "indicate which video to load: cam0 (default) for lateral view and cam1 for bottom view")
+        
+        parser.add_argument('--video-extension', 
                             action='store', default='.avi', type=str, help = "specify video extension, default is .avi")
-        parser.add_argument('--trailpoints', action='store', default=0, type=int, help = "specify number (an integer) of trailpoints to plot when creating labeled video")
-        parser.add_argument('--data-extension', action='store', default='.h5', type=str, help = "specify the data extension to be used, default is .h5")
-        parser.add_argument('--experimenter',default=None,type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
-        parser.add_argument('--extract-mode', action='store', default = 'manual', help = "specify if extraction ocurs manual (default) or automatic")
-        parser.add_argument('--extract-algo', action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default))")
-        parser.add_argument('--extract-no-user-feedback', action='store_false',
-                            default = True,
-                            help="Use user feedback for extraction (default True)")
-        parser.add_argument('--extract-crop', action='store_true' ,default = False, help = "specify if user wants to crop video before extracting frames (default is False)")
+        
+        parser.add_argument('--trailpoints', 
+                            action='store', default=0, type=int, help = "specify number (an integer) of trailpoints to plot when creating labeled video")
+        
+        parser.add_argument('--data-extension', 
+                            action='store', default='.h5', type=str, help = "specify the data extension to be used, default is .h5")
+        
+        parser.add_argument('--experimenter', 
+                            action = 'store', default=None,type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
+        
+        parser.add_argument('--extract-mode', 
+                            action='store', default = 'manual', help = "specify if extraction ocurs manual (default) or automatic")
+        
+        parser.add_argument('--extract-algo', 
+                            action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default))")
+        
+        parser.add_argument('--extract-no-user-feedback', 
+                            action='store_false', default = True, help="Use user feedback for extraction (default True)")
+        
+        parser.add_argument('--extract-crop', 
+                            action='store_true', type = bool, default = False, help = "specify if user wants to crop video before extracting frames (default is False)")
+        
+        parser.add_argument('--training-set', 
+                            action = 'store', default = 0, type = int, help = "specify the index for the training set you want to use (default is 0)")
 
         args = parser.parse_args(arguments[1:])
 
         self.labeling_session = args.label_session
-        self.labeling_subject = args.label_subject
+        self.labeling_subject = args.label_subjects
         self.example_config = args.example_config
         self.training_iterations = args.training_iterations
         self.trailpoints = args.trailpoints
+        self.training_set = args.training_set
 
         self.video_filter = args.video_filter
         self.video_extension = args.video_extension
