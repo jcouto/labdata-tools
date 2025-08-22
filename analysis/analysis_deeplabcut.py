@@ -114,7 +114,7 @@ Gabriel Rojas Bowe, Joao Couto - 2021
                             action='store_false', help="Use user feedback for extraction (default is USER FEEDBACK)")
         
         parser.add_argument('--extract-crop', 
-                            action='store_false', help = "specify if user wants to crop video before extracting frames (default is NO CROP)")
+                            action='store_true', help = "specify if user wants to crop video before extracting frames (default is NO CROP)")
         
         parser.add_argument('--training-set', 
                             action = 'store', default = 0, type = int, help = "specify the index for the training set you want to use (default is 0)")
