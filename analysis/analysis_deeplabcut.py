@@ -105,16 +105,16 @@ Gabriel Rojas Bowe, Joao Couto - 2021
                             action = 'store', default=None,type=str, help = "add experimenter as well as which view is being used for this project (lateral or bottom, i.e. GRB-lateral)")
         
         parser.add_argument('--extract-mode', 
-                            action='store', default = 'manual', help = "specify if extraction ocurs manual (default) or automatic")
+                            action='store', default = 'manual', type = str, help = "specify if extraction ocurs manual (default) or automatic")
         
         parser.add_argument('--extract-algo', 
-                            action='store', default = 'kmeans', help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default))")
+                            action='store', default = 'kmeans', type = str, help = "if extract-mode = automatic, specify the algorithm to use (uniform or kmeans (default))")
         
         parser.add_argument('--extract-no-user-feedback', 
-                            action='store_false', default = True, help="Use user feedback for extraction (default True)")
+                            action='store_false', help="Use user feedback for extraction (default is USER FEEDBACK)")
         
         parser.add_argument('--extract-crop', 
-                            action='store_true', type = bool, default = False, help = "specify if user wants to crop video before extracting frames (default is False)")
+                            action='store_false', help = "specify if user wants to crop video before extracting frames (default is NO CROP)")
         
         parser.add_argument('--training-set', 
                             action = 'store', default = 0, type = int, help = "specify the index for the training set you want to use (default is 0)")
